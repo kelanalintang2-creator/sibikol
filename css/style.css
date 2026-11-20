@@ -1,0 +1,184 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+body {
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.aspect-16-9 {
+  aspect-ratio: 16 / 9;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Rich Text Content Styling */
+.content-html ul, .ql-editor ul {
+  list-style-type: disc !important;
+  padding-left: 1.5em !important;
+  margin-bottom: 1em;
+}
+.content-html ol, .ql-editor ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5em !important;
+  margin-bottom: 1em;
+}
+.content-html p {
+  margin-bottom: 0.75em;
+}
+.content-html strong {
+  font-weight: bold;
+}
+.content-html em {
+  font-style: italic;
+}
+.content-html u {
+  text-decoration: underline;
+}
+
+/* ==================================================== */
+/* DESAIN KARTU PELAJAR & GURU DIGITAL (Sesuai Contoh)   */
+/* Rasio CR80: 54mm x 85.6mm (Vertical / Portrait)      */
+/* ==================================================== */
+.id-card-wrapper {
+  perspective: 1000px;
+}
+
+.id-card {
+  width: 280px;
+  height: 440px;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #1e0b36 0%, #2e1065 45%, #3b0764 100%);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 15px 35px -10px rgba(46, 16, 101, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+  box-sizing: border-box;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Kartu Guru: Sentuhan Emerald / Sapphire */
+.id-card-teacher {
+  background: linear-gradient(145deg, #092c3e 0%, #064e3b 50%, #0f172a 100%);
+  box-shadow: 0 15px 35px -10px rgba(6, 78, 59, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+}
+
+/* Aksen Gelombang & Kurva Magenta / Pink */
+.id-card::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.6) 0%, rgba(217, 70, 239, 0) 70%);
+  pointer-events: none;
+}
+
+.id-card::after {
+  content: '';
+  position: absolute;
+  bottom: -60px;
+  left: -60px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.5) 0%, rgba(99, 102, 241, 0) 70%);
+  pointer-events: none;
+}
+
+.id-card-wave {
+  position: absolute;
+  top: 95px;
+  left: -20px;
+  right: -20px;
+  height: 90px;
+  background: radial-gradient(ellipse at 50% 100%, rgba(236, 72, 153, 0.35) 0%, transparent 70%);
+  pointer-events: none;
+  transform: rotate(-6deg);
+}
+
+.id-card-avatar {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  border: 3.5px solid #ec4899;
+  box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4), 0 0 0 3px rgba(255, 255, 255, 0.8);
+  object-fit: cover;
+  background-color: #ffffff;
+  margin: 0 auto;
+  display: block;
+  position: relative;
+  z-index: 10;
+}
+
+.id-card-teacher .id-card-avatar {
+  border-color: #10b981;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4), 0 0 0 3px rgba(255, 255, 255, 0.8);
+}
+
+.id-card-qr-box {
+  background: #ffffff;
+  padding: 7px;
+  border-radius: 14px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(236, 72, 153, 0.5);
+  margin: 0 auto;
+  position: relative;
+  z-index: 10;
+}
+
+.id-card-teacher .id-card-qr-box {
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+/* ==================================================== */
+/* PRINT GRID UNTUK LEMBAR A4 (@media print)            */
+/* ==================================================== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printSection, #printSection * {
+    visibility: visible;
+  }
+  #printSection {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 8mm;
+    background: #ffffff;
+  }
+  .print-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8mm !important;
+    page-break-inside: avoid;
+  }
+  .id-card {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    box-shadow: none !important;
+    border: 1px solid #475569 !important;
+    page-break-inside: avoid !important;
+    margin: 0 auto 6mm auto !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

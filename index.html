@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIAP SEKOLAH - SD Negeri Pilangrejo 1 (SPILSA PRO)</title>
+  
+  <!-- PWA Meta Tags & Web App Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4338ca">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SPILSA PRO">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2991/2991148.png">
+
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS untuk Excel Template & Import -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/xlsx.full.min.js"></script>
+  <!-- Quill Rich Text Editor -->
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+  <!-- HTML5 QR Code & Barcode Scanner -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <!-- JSZip untuk Ekstraksi Foto Siswa Masal -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- QRCode.js untuk Cetak Kartu Pelajar & Guru -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- Modular CSS Styling -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 antialiased flex flex-col min-h-screen">
+
+  <!-- PWA INSTALL PROMPT BANNER -->
+  <div id="pwaInstallBanner" class="hidden bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-950 text-white px-4 py-2.5 shadow-md flex justify-between items-center text-xs sticky top-0 z-[60]">
+    <div class="flex items-center gap-2.5">
+      <div class="w-7 h-7 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-mobile-screen-button text-sm"></i>
+      </div>
+      <div>
+        <span class="font-bold text-pink-200">Pasang Aplikasi SPILSA PRO:</span>
+        <span class="hidden sm:inline text-slate-200 ml-1">Instal ke layar utama HP / Komputer untuk akses kilat dan absensi mandiri.</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <button onclick="triggerPWAInstall()" class="bg-pink-600 hover:bg-pink-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow transition flex items-center gap-1.5">
+        <i class="fa-solid fa-download"></i> Instal Aplikasi
+      </button>
+      <button onclick="document.getElementById('pwaInstallBanner').classList.add('hidden')" class="text-white/60 hover:text-white p-1 text-base">&times;</button>
+    </div>
+  </div>
+
+  <!-- Header Navigasi Luar -->
+  <header class="bg-indigo-700 shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('dashboard')">
+        <div class="relative">
+          <img id="headerLogo" src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" class="w-10 h-10 object-contain bg-white rounded-lg p-1 shadow" alt="Logo">
+          <span id="syncIndicatorDot" class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 border-2 border-indigo-700" title="Status Sinkronisasi SWR"></span>
+        </div>
+        <div>
+          <span id="headerNamaSekolah" class="text-white font-extrabold text-base sm:text-lg tracking-wide block leading-tight">SD NEGERI PILANGREJO 1</span>
+          <span class="text-indigo-200 text-[11px] font-medium">Kabupaten Demak, Jawa Tengah</span>
+        </div>
+      </div>
+      <nav class="flex items-center space-x-1 sm:space-x-3">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-indigo-700 shadow transition flex items-center gap-2">
+          <i class="fa-solid fa-house"></i> <span class="hidden sm:inline">Portal Sekolah</span>
+        </button>
+        <button onclick="switchTab('siswa')" id="nav-siswa" class="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white hover:bg-indigo-800 transition flex items-center gap-2">
+          <i class="fa-solid fa-id-badge"></i> <span class="hidden sm:inline">Portal Siswa</span>
+        </button>
+        <button onclick="handleAdminMenuClick()" id="nav-admin" class="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white hover:bg-indigo-800 transition flex items-center gap-2">
+          <i class="fa-solid fa-lock" id="adminIconLock"></i> <span class="hidden sm:inline">Menu Admin</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Container Utama -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 space-y-10">
+
+    <!-- PORTAL SEKOLAH (DASHBOARD UTAMA) -->
+    <section id="tab-dashboard" class="space-y-10">
+      
+      <!-- Hero Banner Utama Rasio 16:9 -->
+      <div class="relative bg-slate-900 rounded-3xl overflow-hidden shadow-2xl aspect-16-9 max-h-[500px] w-full flex items-center">
+        <div id="heroSliderContainer" class="absolute inset-0 z-0">
+          <!-- Slide foto dinamis 16:9 -->
+        </div>
+        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent z-10"></div>
+
+        <div class="relative z-20 max-w-3xl px-6 sm:px-12 py-6 text-white space-y-2 sm:space-y-4">
+          <span id="heroBadge" class="bg-indigo-600/90 text-indigo-100 text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider inline-block shadow">Website Resmi Sekolah</span>
+          <h1 id="heroTitle" class="text-lg sm:text-3xl lg:text-4xl font-extrabold leading-tight cursor-pointer hover:text-indigo-200 transition" onclick="triggerCurrentHeroModal()">Selamat Datang di Portal Resmi SD Negeri Pilangrejo 1</h1>
+          <p id="heroDesc" class="text-slate-200 text-xs sm:text-sm leading-relaxed line-clamp-2 sm:line-clamp-3">Mewujudkan generasi cerdas, berkarakter mulia, berprestasi, dan berwawasan lingkungan melalui pelayanan pendidikan berkualitas.</p>
+          <div class="flex flex-wrap gap-2 pt-1">
+            <button onclick="triggerCurrentHeroModal()" class="bg-white text-indigo-700 font-bold px-4 py-2 rounded-xl text-xs sm:text-sm shadow hover:bg-indigo-50 transition flex items-center gap-1.5"><i class="fa-solid fa-arrow-up-right-from-square"></i> Baca Detail</button>
+            <a href="#section-berita" class="bg-indigo-900/80 hover:bg-indigo-900 text-white font-bold px-4 py-2 rounded-xl text-xs sm:text-sm border border-indigo-400/50 transition"><i class="fa-solid fa-newspaper mr-1"></i> Berita Terbaru</a>
+          </div>
+        </div>
+
+        <!-- Slider Controls -->
+        <div class="absolute bottom-4 right-4 z-20 flex items-center space-x-2">
+          <button onclick="prevHeroSlide()" class="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 hover:bg-white/40 text-white rounded-full flex items-center justify-center backdrop-blur transition"><i class="fa-solid fa-chevron-left text-xs sm:text-base"></i></button>
+          <div id="heroDots" class="flex space-x-1 items-center"></div>
+          <button onclick="nextHeroSlide()" class="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 hover:bg-white/40 text-white rounded-full flex items-center justify-center backdrop-blur transition"><i class="fa-solid fa-chevron-right text-xs sm:text-base"></i></button>
+        </div>
+      </div>
+
+      <!-- Quick Info Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+          <div class="bg-indigo-50 text-indigo-600 p-4 rounded-xl text-2xl"><i class="fa-solid fa-user-graduate"></i></div>
+          <div>
+            <div id="statTotalSiswa" class="text-xl font-bold text-slate-800">0</div>
+            <div class="text-xs text-slate-500 font-medium">Siswa Aktif</div>
+          </div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+          <div class="bg-emerald-50 text-emerald-600 p-4 rounded-xl text-2xl"><i class="fa-solid fa-chalkboard-user"></i></div>
+          <div>
+            <div id="statTotalGuru" class="text-xl font-bold text-slate-800">0</div>
+            <div class="text-xs text-slate-500 font-medium">Dewan Guru & Staf</div>
+          </div>
+        </div>
+        <!-- Interaktif: Klik Angka Prestasi -->
+        <div onclick="openAllPrestasiModal()" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4 cursor-pointer hover:border-amber-400 hover:shadow-md transition">
+          <div class="bg-amber-50 text-amber-600 p-4 rounded-xl text-2xl"><i class="fa-solid fa-trophy"></i></div>
+          <div>
+            <div id="statTotalPrestasi" class="text-xl font-bold text-amber-600 flex items-center gap-1.5">0 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i></div>
+            <div class="text-xs text-slate-500 font-medium">Prestasi (Klik Detail)</div>
+          </div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+          <div class="bg-purple-50 text-purple-600 p-4 rounded-xl text-2xl"><i class="fa-solid fa-school-flag"></i></div>
+          <div>
+            <div class="text-xl font-bold text-slate-800">Akreditasi A</div>
+            <div class="text-xs text-slate-500 font-medium">Unggul & Terpercaya</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profil & Sambutan Kepala Sekolah -->
+      <div id="section-profil" class="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-slate-100 grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+        <div class="lg:col-span-1 text-center bg-slate-50 p-6 rounded-2xl border border-slate-200/60">
+          <img id="portalFotoKepsek" src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80" class="w-36 h-36 rounded-full mx-auto mb-4 object-cover shadow-md border-4 border-white" alt="Foto Kepsek">
+          <h3 id="portalNamaKepsek" class="text-base font-bold text-slate-800">Kepala Sekolah</h3>
+          <p id="portalNamaSekolahSubtitle" class="text-xs text-indigo-600 font-semibold mb-2">SD Negeri Pilangrejo 1</p>
+        </div>
+        <div class="lg:col-span-2 space-y-4">
+          <h2 class="text-2xl font-extrabold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-quote-left text-indigo-600"></i> Sambutan Kepala Sekolah</h2>
+          <div id="portalSambutan" class="text-slate-600 text-sm leading-relaxed content-html"></div>
+          <div class="pt-4 mt-4 border-t border-slate-100 grid grid-cols-1 gap-4">
+            <div class="bg-gradient-to-br from-indigo-50 to-white p-5 rounded-2xl border border-indigo-100 shadow-sm relative overflow-hidden group hover:shadow-md transition">
+              <div class="absolute -right-4 -top-4 text-indigo-100 opacity-40 text-7xl group-hover:scale-110 transition duration-500"><i class="fa-solid fa-eye"></i></div>
+              <h4 class="font-bold text-indigo-800 text-sm relative z-10 flex items-center gap-2 mb-2"><div class="p-1.5 bg-indigo-600 text-white rounded-lg text-xs shadow-sm"><i class="fa-solid fa-eye"></i></div> Visi Sekolah</h4>
+              <div id="portalVisi" class="text-slate-700 text-xs italic relative z-10 font-medium content-html"></div>
+            </div>
+            <div class="bg-gradient-to-br from-emerald-50 to-white p-5 rounded-2xl border border-emerald-100 shadow-sm relative overflow-hidden group hover:shadow-md transition">
+              <div class="absolute -right-4 -top-4 text-emerald-100 opacity-40 text-7xl group-hover:scale-110 transition duration-500"><i class="fa-solid fa-bullseye"></i></div>
+              <h4 class="font-bold text-emerald-800 text-sm relative z-10 flex items-center gap-2 mb-2"><div class="p-1.5 bg-emerald-600 text-white rounded-lg text-xs shadow-sm"><i class="fa-solid fa-bullseye"></i></div> Misi Sekolah</h4>
+              <div id="portalMisi" class="text-slate-700 text-xs leading-relaxed relative z-10 font-medium content-html"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profil Tenaga Pendidik & Kependidikan -->
+      <div class="space-y-4">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-chalkboard-user text-indigo-600"></i> Profil Tenaga Pendidik & Kependidikan</h2>
+        </div>
+        <div id="publicStaffContainer" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <!-- Profil Pendidik Dinamis -->
+        </div>
+      </div>
+
+      <!-- Berita & Agenda Sekolah -->
+      <div id="section-berita" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2 space-y-4">
+          <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-newspaper text-indigo-600"></i> Berita & Pengumuman Sekolah</h2>
+          <div id="publicBeritaContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+        </div>
+        <div class="space-y-4">
+          <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-calendar-days text-indigo-600"></i> Agenda Kegiatan</h2>
+          <div id="publicAgendaContainer" class="space-y-3"></div>
+        </div>
+      </div>
+
+      <!-- Galeri Foto Sekolah SLEDING (CAROUSEL) -->
+      <div id="section-galeri" class="space-y-4 pt-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-images text-indigo-600"></i> Galeri Foto Sekolah</h2>
+            <p class="text-xs text-slate-500 mt-1">Geser/Sliding foto untuk melihat lebih banyak dokumentasi kegiatan.</p>
+          </div>
+          <div class="flex space-x-2">
+            <button onclick="scrollGaleriLeft()" class="p-2.5 bg-white rounded-full shadow border hover:bg-slate-50 transition"><i class="fa-solid fa-chevron-left text-slate-600"></i></button>
+            <button onclick="scrollGaleriRight()" class="p-2.5 bg-white rounded-full shadow border hover:bg-slate-50 transition"><i class="fa-solid fa-chevron-right text-slate-600"></i></button>
+          </div>
+        </div>
+        <div id="publicGaleriSlider" class="flex space-x-4 overflow-x-auto scroll-smooth hide-scrollbar pb-4">
+          <!-- Galeri Sliding 16:9 -->
+        </div>
+      </div>
+
+      <!-- Lokasi Maps & Kontak Kami -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-6 border-t border-slate-200">
+        <div class="lg:col-span-2 space-y-3">
+          <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-map-location-dot text-indigo-600"></i> Lokasi Sekolah (Google Maps)</h2>
+          <div class="w-full rounded-2xl overflow-hidden shadow-sm border border-slate-200 h-80 bg-slate-100">
+            <iframe id="portalMapsIframe" src="" class="w-full h-full border-0" allowfullscreen="" loading="lazy"></iframe>
+          </div>
+        </div>
+        <div class="space-y-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+          <div class="space-y-4">
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-address-book text-indigo-600"></i> Kontak Kami</h2>
+            <div class="space-y-3 text-xs sm:text-sm text-slate-600">
+              <div class="flex items-start gap-3"><i class="fa-solid fa-location-dot text-indigo-600 text-base shrink-0 mt-0.5"></i> <span id="portalAlamat"></span></div>
+              <div class="flex items-center gap-3"><i class="fa-solid fa-phone text-indigo-600 text-base shrink-0"></i> <span id="portalTelepon"></span></div>
+              <div class="flex items-center gap-3"><i class="fa-solid fa-envelope text-indigo-600 text-base shrink-0"></i> <span id="portalEmail"></span></div>
+            </div>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Media Sosial Resmi</h4>
+            <div class="flex space-x-3">
+              <a id="portalFb" href="#" target="_blank" class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition"><i class="fa-brands fa-facebook-f text-lg"></i></a>
+              <a id="portalIg" href="#" target="_blank" class="w-10 h-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center hover:bg-pink-600 hover:text-white transition"><i class="fa-brands fa-instagram text-lg"></i></a>
+              <a id="portalYt" href="#" target="_blank" class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition"><i class="fa-brands fa-youtube text-lg"></i></a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ADMIN PANEL TAB -->
+    <section id="tab-admin" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-emerald-600"></i> Panel Administrator & Analitik (SPILSA PRO)</h2>
+          <p class="text-sm text-slate-500">Kelola master data sekolah, rekapitulasi presensi, kartu digital, WhatsApp Gateway, dan migrasi database.</p>
+        </div>
+        <button onclick="adminLogout()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 shrink-0">
+          <i class="fa-solid fa-right-from-bracket"></i> Keluar Admin
+        </button>
+      </div>
+
+      <!-- Submenu Admin Main Navigation (Lengkap dengan WA CRM & Migrasi) -->
+      <div class="flex space-x-2 border-b pb-2 overflow-x-auto hide-scrollbar">
+        <button onclick="switchAdminSub('dashboard')" id="subnav-dashboard" class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-chart-pie"></i> Dashboard & Cari</button>
+        <button onclick="switchAdminSub('presensi-siswa')" id="subnav-presensi-siswa" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-clipboard-check"></i> Presensi Siswa</button>
+        <button onclick="switchAdminSub('presensi-guru')" id="subnav-presensi-guru" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-user-check"></i> Presensi Guru</button>
+        <button onclick="switchAdminSub('web')" id="subnav-web" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-globe"></i> Menu Web Sekolah</button>
+        <button onclick="switchAdminSub('siswa')" id="subnav-siswa" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-user-graduate"></i> Siswa</button>
+        <button onclick="switchAdminSub('guru')" id="subnav-guru" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-chalkboard-user"></i> Guru</button>
+        <button onclick="switchAdminSub('kelas')" id="subnav-kelas" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-school"></i> Kelas</button>
+        <button onclick="switchAdminSub('prestasi')" id="subnav-prestasi" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-trophy"></i> Prestasi</button>
+        <button onclick="switchAdminSub('konseling')" id="subnav-konseling" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-hands-holding-child"></i> Konseling</button>
+        <button onclick="switchAdminSub('catatan')" id="subnav-catatan" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-clipboard-user"></i> Pelanggaran</button>
+        <button onclick="switchAdminSub('jenis')" id="subnav-jenis" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-list-check"></i> Jenis Pelanggaran</button>
+        <button onclick="switchAdminSub('wa')" id="subnav-wa" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-brands fa-whatsapp text-emerald-600"></i> WhatsApp CRM</button>
+        <button onclick="switchAdminSub('migrasi')" id="subnav-migrasi" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-database text-purple-600"></i> Migrasi DB</button>
+        <button onclick="switchAdminSub('password')" id="subnav-password" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-key"></i> Password</button>
+      </div>
+
+      <!-- 0. SUBMENU DASHBOARD ADMIN -->
+      <div id="admin-sub-dashboard" class="space-y-6">
+        <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 sm:p-8 text-white shadow-md text-center">
+          <h3 class="text-xl sm:text-2xl font-extrabold mb-2">Pencarian Data Siswa (Admin)</h3>
+          <p class="text-indigo-100 mb-4 text-xs sm:text-sm">Filter dan temukan data siswa dengan cepat dari panel admin.</p>
+          
+          <div class="flex flex-wrap justify-center gap-2 mb-4">
+            <button onclick="setFilterType('all')" id="filter-all" class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white text-indigo-600 shadow transition">Semua</button>
+            <button onclick="setFilterType('nama')" id="filter-nama" class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-indigo-700/50 text-white hover:bg-white hover:text-indigo-600 transition">Nama</button>
+            <button onclick="setFilterType('nisn')" id="filter-nisn" class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-indigo-700/50 text-white hover:bg-white hover:text-indigo-600 transition">NISN</button>
+            <button onclick="setFilterType('usia')" id="filter-usia" class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-indigo-700/50 text-white hover:bg-white hover:text-indigo-600 transition">Usia (Tahun)</button>
+            <button onclick="setFilterType('alamat')" id="filter-alamat" class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-indigo-700/50 text-white hover:bg-white hover:text-indigo-600 transition">Alamat</button>
+          </div>
+
+          <div class="max-w-xl mx-auto relative">
+            <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Ketik kata kunci pencarian..." 
+                   class="w-full pl-12 pr-4 py-3.5 rounded-xl text-slate-900 bg-white shadow-lg focus:outline-none focus:ring-4 focus:ring-indigo-300 text-sm">
+            <i class="fa-solid fa-search absolute left-4 top-4 text-slate-400 text-base"></i>
+          </div>
+        </div>
+
+        <div id="searchResultContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+          <h3 class="text-base font-bold text-slate-800 mb-6 flex items-center gap-2"><i class="fa-solid fa-chart-column text-indigo-600"></i> Statistik & Rekapitulasi Sekolah</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="bg-slate-50 p-4 rounded-xl border"><h4 class="text-xs font-bold text-center mb-2">1. Rekap Siswa Per Kelas</h4><div class="relative h-52"><canvas id="chartRombel"></canvas></div></div>
+            <div class="bg-slate-50 p-4 rounded-xl border"><h4 class="text-xs font-bold text-center mb-2">2. Rekap Jenis Kelamin</h4><div class="relative h-52"><canvas id="chartGender"></canvas></div></div>
+            <div class="bg-slate-50 p-4 rounded-xl border"><h4 class="text-xs font-bold text-center mb-2">3. Rekap Usia Siswa</h4><div class="relative h-52"><canvas id="chartAge"></canvas></div></div>
+            <div class="bg-slate-50 p-4 rounded-xl border"><h4 class="text-xs font-bold text-center mb-2">4. Rekap Prestasi (Akademik/Non)</h4><div class="relative h-52"><canvas id="chartPrestasiJenis"></canvas></div></div>
+            <div class="bg-slate-50 p-4 rounded-xl border"><h4 class="text-xs font-bold text-center mb-2">5. Rekap Prestasi Tingkat Wilayah</h4><div class="relative h-52"><canvas id="chartPrestasiTingkat"></canvas></div></div>
+            <div class="bg-slate-50 p-4 rounded-xl border"><h4 class="text-xs font-bold text-center mb-2">6. Rekap Masa Jabatan Guru</h4><div class="relative h-52"><canvas id="chartGuruMasa"></canvas></div></div>
+            <div class="bg-slate-50 p-4 rounded-xl border"><h4 class="text-xs font-bold text-center mb-2">7. Rekap Jenis Pelanggaran</h4><div class="relative h-52"><canvas id="chartPelanggaranJenis"></canvas></div></div>
+            <div class="bg-slate-50 p-4 rounded-xl border"><h4 class="text-xs font-bold text-center mb-2">8. Rekap Layanan Konseling</h4><div class="relative h-52"><canvas id="chartKonselingLayanan"></canvas></div></div>
+            <div class="bg-slate-50 p-4 rounded-xl border"><h4 class="text-xs font-bold text-center mb-2">9. Rekap Poin Pelanggaran Kelas</h4><div class="relative h-52"><canvas id="chartPoinKelas"></canvas></div></div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+          <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-medal text-amber-500"></i> Siswa dengan Poin Pelanggaran Tertinggi</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead><tr class="bg-slate-100 text-slate-600 uppercase text-xs"><th class="p-3">Peringkat</th><th class="p-3">Nama Siswa</th><th class="p-3">Kelas</th><th class="p-3">NISN</th><th class="p-3 text-center">Total Poin</th></tr></thead>
+              <tbody id="topViolatorsTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- NEW SUBMENU PRESENSI SISWA -->
+      <div id="admin-sub-presensi-siswa" class="hidden space-y-6">
+        <div class="bg-gradient-to-r from-purple-800 to-indigo-900 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <span class="bg-pink-500/30 text-pink-200 border border-pink-400/40 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Modul Presensi Siswa</span>
+            <h3 class="text-xl sm:text-2xl font-extrabold mt-1">Presensi Siswa Digital</h3>
+            <p class="text-indigo-200 text-xs sm:text-sm mt-1">Gunakan 3 opsi input cepat: Scan Barcode Kartu Pelajar, Scan Wajah Kamera, atau Input Manual.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="togglePresensiSiswaInputMode('barcode')" id="btnModeSiswaBarcode" class="bg-pink-600 hover:bg-pink-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow flex items-center gap-2 transition">
+              <i class="fa-solid fa-qrcode text-base"></i> Scan Barcode
+            </button>
+            <button onclick="togglePresensiSiswaInputMode('wajah')" id="btnModeSiswaWajah" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow flex items-center gap-2 transition">
+              <i class="fa-solid fa-camera text-base"></i> Scan Wajah
+            </button>
+            <button onclick="openManualPresensiSiswaModal()" class="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2.5 rounded-xl text-xs border border-white/30 backdrop-blur shadow flex items-center gap-2 transition">
+              <i class="fa-solid fa-keyboard text-base"></i> Input Manual
+            </button>
+          </div>
+        </div>
+
+        <!-- Scanner Box Container (Dynamic Barcode / Wajah) -->
+        <div id="presensiSiswaScannerContainer" class="hidden bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+          <div class="flex justify-between items-center border-b pb-3">
+            <h4 id="presensiSiswaScannerTitle" class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fa-solid fa-camera text-indigo-600"></i> Kamera Scanner Presensi</h4>
+            <button onclick="closePresensiSiswaScanner()" class="text-slate-400 hover:text-rose-600 text-lg font-bold"><i class="fa-solid fa-xmark"></i> Tutup Kamera</button>
+          </div>
+          
+          <!-- Barcode View -->
+          <div id="presensiSiswaBarcodeView" class="hidden flex flex-col items-center">
+            <div id="readerSiswaBarcode" class="w-full max-w-md rounded-xl overflow-hidden border"></div>
+            <p class="text-xs text-slate-500 mt-2 text-center">Arahkan QR Code / Barcode pada Kartu Pelajar ke kotak kamera di atas.</p>
+          </div>
+
+          <!-- Wajah View -->
+          <div id="presensiSiswaWajahView" class="hidden flex flex-col items-center space-y-3">
+            <div class="relative w-full max-w-md aspect-video bg-black rounded-2xl overflow-hidden shadow">
+              <video id="videoPresensiSiswa" autoplay playsinline class="w-full h-full object-cover"></video>
+              <canvas id="canvasPresensiSiswa" class="hidden"></canvas>
+              <div class="absolute inset-0 border-2 border-dashed border-pink-400/70 rounded-2xl pointer-events-none m-4 flex items-center justify-center">
+                <span class="text-white/60 text-xs bg-black/40 px-3 py-1 rounded-full">Posisikan Wajah Siswa di Sini</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 w-full max-w-md">
+              <select id="selectSiswaWajah" class="flex-grow p-2.5 border rounded-xl text-xs bg-white font-medium focus:ring-2 focus:ring-indigo-300">
+                <option value="">-- Pilih Nama / NISN Siswa Terlebih Dahulu --</option>
+              </select>
+              <button onclick="capturePresensiSiswaWajah()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow flex items-center gap-1.5 shrink-0">
+                <i class="fa-solid fa-camera"></i> Ambil & Absen
+              </button>
+            </div>
+          </div>
+
+          <div id="presensiSiswaScanAlert" class="hidden p-3 rounded-xl text-xs font-semibold text-center transition"></div>
+        </div>
+
+        <!-- KPI Kehadiran Siswa -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div class="bg-white p-4 rounded-2xl border shadow-sm">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Persentase Hadir</div>
+            <div id="kpiSiswaPersen" class="text-2xl font-extrabold text-indigo-600 mt-1">0%</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Bulan Terpilih</div>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border shadow-sm">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Total Hadir</div>
+            <div id="kpiSiswaHadir" class="text-2xl font-extrabold text-emerald-600 mt-1">0</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Siswa</div>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border shadow-sm">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Sakit</div>
+            <div id="kpiSiswaSakit" class="text-2xl font-extrabold text-amber-500 mt-1">0</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Siswa</div>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border shadow-sm">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Izin</div>
+            <div id="kpiSiswaIzin" class="text-2xl font-extrabold text-blue-500 mt-1">0</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Siswa</div>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border shadow-sm col-span-2 sm:col-span-1">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Alpa / Tanpa Ket.</div>
+            <div id="kpiSiswaAlpa" class="text-2xl font-extrabold text-rose-600 mt-1">0</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Siswa</div>
+          </div>
+        </div>
+
+        <!-- Filter & Ekspor Presensi Siswa -->
+        <div class="bg-white p-4 rounded-xl border flex flex-col md:flex-row justify-between items-center gap-4">
+          <div class="flex flex-wrap gap-2 items-center w-full md:w-auto">
+            <input type="month" id="filterPresensiSiswaBulan" onchange="renderPresensiSiswaTable()" class="text-xs p-2 border rounded-lg bg-white">
+            <input type="date" id="filterPresensiSiswaTanggal" onchange="renderPresensiSiswaTable()" class="text-xs p-2 border rounded-lg bg-white">
+            <select id="filterPresensiSiswaKelas" onchange="renderPresensiSiswaTable()" class="text-xs p-2 border rounded-lg bg-white">
+              <option value="">Semua Kelas</option>
+            </select>
+            <select id="filterPresensiSiswaStatus" onchange="renderPresensiSiswaTable()" class="text-xs p-2 border rounded-lg bg-white">
+              <option value="">Semua Status</option>
+              <option value="Hadir">Hadir</option>
+              <option value="Sakit">Sakit</option>
+              <option value="Izin">Izin</option>
+              <option value="Alpa">Alpa</option>
+            </select>
+            <button onclick="resetFilterPresensiSiswa()" class="text-xs text-indigo-600 hover:underline px-2">Reset</button>
+          </div>
+          <div class="flex flex-wrap gap-2 items-center">
+            <button onclick="deleteSelectedPresensiSiswa()" class="bg-rose-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-rose-700"><i class="fa-solid fa-trash"></i> Hapus</button>
+            <button onclick="exportPresensiSiswa('excel')" class="bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow flex items-center gap-1.5"><i class="fa-solid fa-file-excel"></i> Excel</button>
+            <button onclick="exportPresensiSiswa('word')" class="bg-blue-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow flex items-center gap-1.5"><i class="fa-solid fa-file-word"></i> Word</button>
+            <button onclick="exportPresensiSiswa('pdf')" class="bg-rose-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow flex items-center gap-1.5"><i class="fa-solid fa-file-pdf"></i> Cetak / PDF</button>
+          </div>
+        </div>
+
+        <!-- Tabel Log Presensi Siswa -->
+        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 uppercase">
+                <th class="p-3 w-10 text-center"><input type="checkbox" id="selectAllPresensiSiswa" onclick="toggleSelectAllPresensiSiswa(this)"></th>
+                <th class="p-3">No</th>
+                <th class="p-3">Tanggal & Jam</th>
+                <th class="p-3">Siswa / Rombel</th>
+                <th class="p-3">Metode</th>
+                <th class="p-3">Status</th>
+                <th class="p-3 text-center">Foto Wajah</th>
+                <th class="p-3">Keterangan</th>
+                <th class="p-3 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="presensiSiswaTableBody" class="divide-y divide-slate-100"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- NEW SUBMENU PRESENSI GURU -->
+      <div id="admin-sub-presensi-guru" class="hidden space-y-6">
+        <div class="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <span class="bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Modul Presensi Guru & Pegawai</span>
+            <h3 class="text-xl sm:text-2xl font-extrabold mt-1">Presensi Guru & Tenaga Kependidikan</h3>
+            <p class="text-teal-200 text-xs sm:text-sm mt-1">Presensi dewan guru dengan 3 opsi: Scan Barcode ID Card, Scan Wajah Kamera, atau Input Manual.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="togglePresensiGuruInputMode('barcode')" id="btnModeGuruBarcode" class="bg-teal-500 hover:bg-teal-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow flex items-center gap-2 transition">
+              <i class="fa-solid fa-qrcode text-base"></i> Scan Barcode
+            </button>
+            <button onclick="togglePresensiGuruInputMode('wajah')" id="btnModeGuruWajah" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow flex items-center gap-2 transition">
+              <i class="fa-solid fa-camera text-base"></i> Scan Wajah
+            </button>
+            <button onclick="openManualPresensiGuruModal()" class="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2.5 rounded-xl text-xs border border-white/30 backdrop-blur shadow flex items-center gap-2 transition">
+              <i class="fa-solid fa-keyboard text-base"></i> Input Manual
+            </button>
+          </div>
+        </div>
+
+        <!-- Scanner Box Guru -->
+        <div id="presensiGuruScannerContainer" class="hidden bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+          <div class="flex justify-between items-center border-b pb-3">
+            <h4 id="presensiGuruScannerTitle" class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fa-solid fa-camera text-teal-600"></i> Kamera Scanner Presensi Guru</h4>
+            <button onclick="closePresensiGuruScanner()" class="text-slate-400 hover:text-rose-600 text-lg font-bold"><i class="fa-solid fa-xmark"></i> Tutup Kamera</button>
+          </div>
+          
+          <div id="presensiGuruBarcodeView" class="hidden flex flex-col items-center">
+            <div id="readerGuruBarcode" class="w-full max-w-md rounded-xl overflow-hidden border"></div>
+            <p class="text-xs text-slate-500 mt-2 text-center">Arahkan QR Code ID Card Guru ke kamera di atas.</p>
+          </div>
+
+          <div id="presensiGuruWajahView" class="hidden flex flex-col items-center space-y-3">
+            <div class="relative w-full max-w-md aspect-video bg-black rounded-2xl overflow-hidden shadow">
+              <video id="videoPresensiGuru" autoplay playsinline class="w-full h-full object-cover"></video>
+              <canvas id="canvasPresensiGuru" class="hidden"></canvas>
+              <div class="absolute inset-0 border-2 border-dashed border-teal-400/70 rounded-2xl pointer-events-none m-4 flex items-center justify-center">
+                <span class="text-white/60 text-xs bg-black/40 px-3 py-1 rounded-full">Posisikan Wajah Guru di Sini</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 w-full max-w-md">
+              <select id="selectGuruWajah" class="flex-grow p-2.5 border rounded-xl text-xs bg-white font-medium focus:ring-2 focus:ring-teal-300">
+                <option value="">-- Pilih Guru Terlebih Dahulu --</option>
+              </select>
+              <button onclick="capturePresensiGuruWajah()" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow flex items-center gap-1.5 shrink-0">
+                <i class="fa-solid fa-camera"></i> Ambil & Absen
+              </button>
+            </div>
+          </div>
+
+          <div id="presensiGuruScanAlert" class="hidden p-3 rounded-xl text-xs font-semibold text-center transition"></div>
+        </div>
+
+        <!-- KPI Kehadiran Guru -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div class="bg-white p-4 rounded-2xl border shadow-sm">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Persentase Hadir</div>
+            <div id="kpiGuruPersen" class="text-2xl font-extrabold text-teal-600 mt-1">0%</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Bulan Terpilih</div>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border shadow-sm">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Total Hadir</div>
+            <div id="kpiGuruHadir" class="text-2xl font-extrabold text-emerald-600 mt-1">0</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Guru/Staf</div>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border shadow-sm">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Sakit</div>
+            <div id="kpiGuruSakit" class="text-2xl font-extrabold text-amber-500 mt-1">0</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Guru/Staf</div>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border shadow-sm">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Izin</div>
+            <div id="kpiGuruIzin" class="text-2xl font-extrabold text-blue-500 mt-1">0</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Guru/Staf</div>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border shadow-sm col-span-2 sm:col-span-1">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Alpa / Tanpa Ket.</div>
+            <div id="kpiGuruAlpa" class="text-2xl font-extrabold text-rose-600 mt-1">0</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Guru/Staf</div>
+          </div>
+        </div>
+
+        <!-- Filter & Ekspor Presensi Guru -->
+        <div class="bg-white p-4 rounded-xl border flex flex-col md:flex-row justify-between items-center gap-4">
+          <div class="flex flex-wrap gap-2 items-center w-full md:w-auto">
+            <input type="month" id="filterPresensiGuruBulan" onchange="renderPresensiGuruTable()" class="text-xs p-2 border rounded-lg bg-white">
+            <input type="date" id="filterPresensiGuruTanggal" onchange="renderPresensiGuruTable()" class="text-xs p-2 border rounded-lg bg-white">
+            <select id="filterPresensiGuruStatus" onchange="renderPresensiGuruTable()" class="text-xs p-2 border rounded-lg bg-white">
+              <option value="">Semua Status</option>
+              <option value="Hadir">Hadir</option>
+              <option value="Sakit">Sakit</option>
+              <option value="Izin">Izin</option>
+              <option value="Alpa">Alpa</option>
+            </select>
+            <button onclick="resetFilterPresensiGuru()" class="text-xs text-teal-600 hover:underline px-2">Reset</button>
+          </div>
+          <div class="flex flex-wrap gap-2 items-center">
+            <button onclick="deleteSelectedPresensiGuru()" class="bg-rose-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-rose-700"><i class="fa-solid fa-trash"></i> Hapus</button>
+            <button onclick="exportPresensiGuru('excel')" class="bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow flex items-center gap-1.5"><i class="fa-solid fa-file-excel"></i> Excel</button>
+            <button onclick="exportPresensiGuru('word')" class="bg-blue-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow flex items-center gap-1.5"><i class="fa-solid fa-file-word"></i> Word</button>
+            <button onclick="exportPresensiGuru('pdf')" class="bg-rose-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow flex items-center gap-1.5"><i class="fa-solid fa-file-pdf"></i> Cetak / PDF</button>
+          </div>
+        </div>
+
+        <!-- Tabel Log Presensi Guru -->
+        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 uppercase">
+                <th class="p-3 w-10 text-center"><input type="checkbox" id="selectAllPresensiGuru" onclick="toggleSelectAllPresensiGuru(this)"></th>
+                <th class="p-3">No</th>
+                <th class="p-3">Tanggal & Jam</th>
+                <th class="p-3">Nama Guru / NIP</th>
+                <th class="p-3">Jabatan</th>
+                <th class="p-3">Metode</th>
+                <th class="p-3">Status</th>
+                <th class="p-3 text-center">Foto Wajah</th>
+                <th class="p-3">Keterangan</th>
+                <th class="p-3 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="presensiGuruTableBody" class="divide-y divide-slate-100"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- 1. SUBMENU WEB SEKOLAH ADMIN -->
+      <div id="admin-sub-web" class="hidden space-y-6">
+        <div class="flex space-x-2 border-b pb-2 overflow-x-auto hide-scrollbar">
+          <button onclick="switchWebSub('berita')" id="subweb-berita" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white">Berita</button>
+          <button onclick="switchWebSub('pengumuman')" id="subweb-pengumuman" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600">Pengumuman</button>
+          <button onclick="switchWebSub('agenda')" id="subweb-agenda" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600">Agenda</button>
+          <button onclick="switchWebSub('galeri')" id="subweb-galeri" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600">Galeri Foto</button>
+          <button onclick="switchWebSub('dataweb')" id="subweb-dataweb" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600">Data Web Sekolah</button>
+          <button onclick="switchWebSub('staff')" id="subweb-staff" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600">Profil Pendidik</button>
+        </div>
+
+        <!-- LIST CMS BERITA/PENGUMUMAN/AGENDA -->
+        <div id="web-sub-cms" class="space-y-4">
+          <div class="flex justify-between items-center bg-white p-4 rounded-xl border">
+            <h3 id="cmsSectionTitle" class="font-bold text-slate-700">Daftar Berita</h3>
+            <button onclick="openWebCMSModal()" class="bg-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-indigo-700"><i class="fa-solid fa-plus"></i> Tambah Content</button>
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+            <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm">
+              <thead><tr class="bg-slate-100 text-slate-600 uppercase text-xs"><th class="p-3">No</th><th class="p-3">Foto 16:9</th><th class="p-3">Judul</th><th class="p-3">Tanggal</th><th class="p-3">Kategori</th><th class="p-3 text-center">Aksi</th></tr></thead>
+              <tbody id="webCMSTableBody" class="divide-y divide-slate-100"></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <!-- LIST CMS GALERI FOTO -->
+        <div id="web-sub-galeri" class="hidden space-y-4">
+          <div class="flex justify-between items-center bg-white p-4 rounded-xl border">
+            <h3 class="font-bold text-slate-700">Kelola Galeri Foto Sekolah (Upload)</h3>
+            <button onclick="openGaleriModal()" class="bg-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-indigo-700"><i class="fa-solid fa-plus"></i> Tambah Foto Galeri</button>
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+            <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm">
+              <thead><tr class="bg-slate-100 text-slate-600 uppercase text-xs"><th class="p-3">No</th><th class="p-3">Foto 16:9</th><th class="p-3">Judul Foto</th><th class="p-3">Kategori</th><th class="p-3 text-center">Aksi</th></tr></thead>
+              <tbody id="galeriTableBody" class="divide-y divide-slate-100"></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <!-- DATA WEB SEKOLAH (INPUT FORM KOMPLET) -->
+        <div id="web-sub-dataweb" class="hidden bg-white p-6 rounded-2xl border space-y-4">
+          <h3 class="font-bold text-slate-800 border-b pb-3"><i class="fa-solid fa-gears text-indigo-600"></i> Pengaturan Data Web Sekolah & Informasi Kontak</h3>
+          <form onsubmit="handleSchoolProfileSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
+            <div><label class="block font-semibold mb-1">Nama Sekolah</label><input type="text" id="profNamaSekolah" required class="w-full p-2.5 border rounded-lg"></div>
+            <div>
+              <label class="block font-semibold mb-1">Upload Logo Sekolah</label>
+              <input type="file" id="profLogoFile" accept="image/*" class="w-full p-2 border rounded-lg text-xs">
+              <input type="hidden" id="profLogoUrl">
+            </div>
+            <div><label class="block font-semibold mb-1">Nama Kepala Sekolah</label><input type="text" id="profNamaKepsek" required class="w-full p-2.5 border rounded-lg"></div>
+            <div>
+              <label class="block font-semibold mb-1">Upload Foto Kepala Sekolah</label>
+              <input type="file" id="profFotoKepsekFile" accept="image/*" class="w-full p-2 border rounded-lg text-xs">
+              <input type="hidden" id="profFotoKepsekUrl">
+            </div>
+            <div class="md:col-span-2">
+              <label class="block font-semibold mb-1">Sambutan Kepala Sekolah</label>
+              <div id="profSambutanEditor" class="bg-white" style="height: 150px;"></div>
+              <input type="hidden" id="profSambutan">
+            </div>
+            <div class="md:col-span-2">
+              <label class="block font-semibold mb-1">Visi Sekolah</label>
+              <div id="profVisiEditor" class="bg-white" style="height: 100px;"></div>
+              <input type="hidden" id="profVisi">
+            </div>
+            <div class="md:col-span-2">
+              <label class="block font-semibold mb-1">Misi Sekolah</label>
+              <div id="profMisiEditor" class="bg-white" style="height: 150px;"></div>
+              <input type="hidden" id="profMisi">
+            </div>
+            <div class="md:col-span-2"><label class="block font-semibold mb-1">Tag Location / Link Embed Google Maps (Src URL / Kode Iframe)</label><input type="text" id="profMapsEmbed" class="w-full p-2.5 border rounded-lg" placeholder="https://www.google.com/maps/embed?..."></div>
+            <div class="md:col-span-2 bg-indigo-50/70 p-3.5 rounded-xl border border-indigo-100">
+              <span class="text-xs font-bold text-indigo-900 block mb-2"><i class="fa-solid fa-location-crosshairs mr-1"></i> Pengaturan Geofencing / Titik GPS Presensi Mandiri Siswa</span>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-700 mb-1">Latitude Sekolah</label>
+                  <input type="text" id="profLatitude" class="w-full p-2 border rounded-lg text-xs" placeholder="-6.892000">
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-700 mb-1">Longitude Sekolah</label>
+                  <input type="text" id="profLongitude" class="w-full p-2 border rounded-lg text-xs" placeholder="110.612000">
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-700 mb-1">Radius Toleransi Presensi (Meter)</label>
+                  <input type="number" id="profRadiusPresensi" class="w-full p-2 border rounded-lg text-xs" placeholder="150" value="150">
+                </div>
+              </div>
+            </div>
+            <div class="md:col-span-2"><label class="block font-semibold mb-1">Alamat Lengkap</label><input type="text" id="profAlamat" class="w-full p-2.5 border rounded-lg"></div>
+            <div><label class="block font-semibold mb-1">Nomor Telepon / WA yang Bisa Dihubungi</label><input type="text" id="profTelepon" class="w-full p-2.5 border rounded-lg"></div>
+            <div><label class="block font-semibold mb-1">Alamat Email</label><input type="email" id="profEmail" class="w-full p-2.5 border rounded-lg"></div>
+            <div><label class="block font-semibold mb-1">Link Facebook</label><input type="url" id="profFb" class="w-full p-2.5 border rounded-lg"></div>
+            <div><label class="block font-semibold mb-1">Link Instagram</label><input type="url" id="profIg" class="w-full p-2.5 border rounded-lg"></div>
+            <div><label class="block font-semibold mb-1">Link YouTube</label><input type="url" id="profYt" class="w-full p-2.5 border rounded-lg"></div>
+            <div class="md:col-span-2 flex justify-end pt-2">
+              <button id="btnSaveWebData" type="submit" class="bg-indigo-600 text-white font-bold px-6 py-2.5 rounded-xl shadow hover:bg-indigo-700 transition">Simpan Pengaturan Web</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- SUBMENU PROFIL PENDIDIK -->
+        <div id="web-sub-staff" class="hidden space-y-4">
+          <div class="flex justify-between items-center bg-white p-4 rounded-xl border">
+            <h3 class="font-bold text-slate-700">Profil Tenaga Pendidik & Kependidikan</h3>
+            <button onclick="openStaffModal()" class="bg-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-indigo-700"><i class="fa-solid fa-plus"></i> Tambah Profil Guru</button>
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+            <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm">
+              <thead><tr class="bg-slate-100 text-slate-600 uppercase text-xs"><th class="p-3">No</th><th class="p-3">Foto</th><th class="p-3">Nama Guru</th><th class="p-3">NIP</th><th class="p-3">Jabatan</th><th class="p-3 text-center">Aksi</th></tr></thead>
+              <tbody id="staffTableBody" class="divide-y divide-slate-100"></tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. SUBMENU SISWA -->
+      <div id="admin-sub-siswa" class="hidden space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-xl border gap-3">
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <h3 class="font-bold text-slate-700 shrink-0">Daftar Siswa</h3>
+            <input type="text" id="searchAdminSiswa" oninput="renderAdminTable()" placeholder="Cari siswa..." class="p-2 text-xs border rounded-lg w-full sm:w-60">
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="deleteSelectedStudents()" class="bg-rose-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-rose-700 transition"><i class="fa-solid fa-trash"></i> Hapus</button>
+            <button onclick="downloadStudentTemplate()" class="bg-slate-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-slate-700 transition"><i class="fa-solid fa-download"></i> Template Excel</button>
+            <button onclick="openZipUploadModal()" class="bg-purple-600 text-white px-3 py-2 rounded-xl text-xs font-semibold shadow hover:bg-purple-700 transition flex items-center gap-1.5"><i class="fa-solid fa-file-zipper"></i> Upload Foto (.Zip)</button>
+            <button onclick="openBulkStudentCardModal()" class="bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-semibold shadow hover:bg-indigo-700 transition flex items-center gap-1.5"><i class="fa-solid fa-id-card"></i> Cetak Kartu Siswa</button>
+            <button onclick="openStudentModal()" class="bg-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-indigo-700"><i class="fa-solid fa-user-plus"></i> Tambah</button>
+            <label class="bg-emerald-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow cursor-pointer hover:bg-emerald-700 flex items-center gap-1.5"><i class="fa-solid fa-file-excel"></i> Pilih File <input type="file" id="excelStudentFile" accept=".xlsx, .xls" class="hidden" onchange="showUploadBtn('Student')"></label>
+            <button id="btnUploadStudent" onclick="handleStudentExcelImport()" class="hidden bg-emerald-800 text-white px-3 py-2 rounded-xl text-xs font-semibold shadow hover:bg-emerald-900 transition flex items-center gap-1.5"><i class="fa-solid fa-upload"></i> Upload</button>
+            <button onclick="exportData('siswa', 'excel')" class="bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-semibold"><i class="fa-solid fa-file-excel"></i></button>
+            <button onclick="exportData('siswa', 'word')" class="bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-semibold"><i class="fa-solid fa-file-word"></i></button>
+            <button onclick="exportData('siswa', 'pdf')" class="bg-rose-600 text-white px-3 py-2 rounded-xl text-xs font-semibold"><i class="fa-solid fa-file-pdf"></i></button>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 uppercase text-xs">
+                <th class="p-3 w-10 text-center"><input type="checkbox" id="selectAllStudents" onclick="toggleSelectAllStudents(this)"></th>
+                <th class="p-3">No</th><th class="p-3">Nama / NISN</th><th class="p-3">JK</th><th class="p-3">Kelas</th><th class="p-3">TTL</th><th class="p-3">Orang Tua</th><th class="p-3 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="adminTableBody" class="divide-y divide-slate-100"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- 3. SUBMENU GURU -->
+      <div id="admin-sub-guru" class="hidden space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-xl border gap-3">
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <h3 class="font-bold text-slate-700 shrink-0">Daftar Guru</h3>
+            <input type="text" id="searchAdminGuru" oninput="renderTeacherTable()" placeholder="Cari guru..." class="p-2 text-xs border rounded-lg w-full sm:w-60">
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="deleteSelectedTeachers()" class="bg-rose-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-rose-700 transition"><i class="fa-solid fa-trash"></i> Hapus</button>
+            <button onclick="downloadTeacherTemplate()" class="bg-slate-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-slate-700"><i class="fa-solid fa-download"></i> Template Excel</button>
+            <button onclick="openBulkTeacherCardModal()" class="bg-teal-600 text-white px-3 py-2 rounded-xl text-xs font-semibold shadow hover:bg-teal-700 transition flex items-center gap-1.5"><i class="fa-solid fa-id-card"></i> Cetak Kartu Guru</button>
+            <button onclick="openTeacherModal()" class="bg-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-indigo-700"><i class="fa-solid fa-user-plus"></i> Tambah</button>
+            <label class="bg-emerald-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow cursor-pointer hover:bg-emerald-700 flex items-center gap-1.5"><i class="fa-solid fa-file-excel"></i> Pilih File <input type="file" id="excelTeacherFile" accept=".xlsx, .xls" class="hidden" onchange="showUploadBtn('Teacher')"></label>
+            <button id="btnUploadTeacher" onclick="handleTeacherExcelImport()" class="hidden bg-emerald-800 text-white px-3 py-2 rounded-xl text-xs font-semibold shadow hover:bg-emerald-900 transition flex items-center gap-1.5"><i class="fa-solid fa-upload"></i> Upload</button>
+            <button onclick="exportData('guru', 'excel')" class="bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-semibold"><i class="fa-solid fa-file-excel"></i></button>
+            <button onclick="exportData('guru', 'word')" class="bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-semibold"><i class="fa-solid fa-file-word"></i></button>
+            <button onclick="exportData('guru', 'pdf')" class="bg-rose-600 text-white px-3 py-2 rounded-xl text-xs font-semibold"><i class="fa-solid fa-file-pdf"></i></button>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 uppercase text-xs">
+                <th class="p-3 w-10 text-center"><input type="checkbox" id="selectAllTeachers" onclick="toggleSelectAllTeachers(this)"></th>
+                <th class="p-3">No</th><th class="p-3">NIP / Nama Guru</th><th class="p-3">Jabatan</th><th class="p-3">No. HP / Email</th><th class="p-3">Pendidikan</th><th class="p-3 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="teacherTableBody" class="divide-y divide-slate-100"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- 4. SUBMENU KELAS -->
+      <div id="admin-sub-kelas" class="hidden space-y-4">
+        <div class="flex justify-between items-center bg-white p-4 rounded-xl border">
+          <h3 class="font-bold text-slate-700">Daftar Kelas & Wali Kelas</h3>
+          <button onclick="openClassModal()" class="bg-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-indigo-700"><i class="fa-solid fa-plus"></i> Tambah Kelas</button>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm">
+            <thead><tr class="bg-slate-100 text-slate-600 uppercase text-xs"><th class="p-3">No</th><th class="p-3">Nama Kelas</th><th class="p-3 text-center">Jumlah Siswa</th><th class="p-3">Wali Kelas</th><th class="p-3 text-center">Aksi</th></tr></thead>
+            <tbody id="classTableBody" class="divide-y divide-slate-100"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- 5. SUBMENU PRESTASI SISWA -->
+      <div id="admin-sub-prestasi" class="hidden space-y-4">
+        <div class="bg-white p-4 rounded-xl border flex flex-col md:flex-row justify-between items-center gap-4">
+          <div class="flex flex-wrap gap-2 items-center w-full md:w-auto">
+            <h3 class="font-bold text-slate-700 shrink-0">Daftar Prestasi</h3>
+            <div class="flex flex-wrap gap-2 items-center">
+              <select id="filterPrestasiJuara" class="text-xs p-2 border rounded-lg bg-white">
+                <option value="">Semua Juara</option>
+                <option value="Juara 1">Juara 1</option>
+                <option value="Juara 2">Juara 2</option>
+                <option value="Juara 3">Juara 3</option>
+              </select>
+              <select id="filterPrestasiWilayah" class="text-xs p-2 border rounded-lg bg-white">
+                <option value="">Semua Tingkat</option>
+                <option value="Kecamatan">Kecamatan</option>
+                <option value="Kabupaten/Kota">Kabupaten/Kota</option>
+                <option value="Provinsi">Provinsi</option>
+                <option value="Nasional">Nasional</option>
+              </select>
+              <button onclick="renderPrestasiTable()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow"><i class="fa-solid fa-filter"></i> Filter</button>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 items-center">
+            <button onclick="deleteSelectedPrestasi()" class="bg-rose-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-rose-700"><i class="fa-solid fa-trash"></i> Hapus</button>
+            <button onclick="downloadPrestasiTemplate()" class="bg-slate-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-slate-700"><i class="fa-solid fa-download"></i> Template Excel</button>
+            <button onclick="openPrestasiModal()" class="bg-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-indigo-700"><i class="fa-solid fa-plus"></i> Tambah</button>
+            <label class="bg-emerald-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow cursor-pointer hover:bg-emerald-700 flex items-center gap-1.5"><i class="fa-solid fa-file-excel"></i> Pilih File <input type="file" id="excelPrestasiFile" accept=".xlsx, .xls" class="hidden" onchange="showUploadBtn('Prestasi')"></label>
+            <button id="btnUploadPrestasi" onclick="handlePrestasiExcelImport()" class="hidden bg-emerald-800 text-white px-3 py-2 rounded-xl text-xs font-semibold shadow hover:bg-emerald-900 transition flex items-center gap-1.5"><i class="fa-solid fa-upload"></i> Upload</button>
+            <button onclick="exportData('prestasi', 'excel')" class="bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-semibold"><i class="fa-solid fa-file-excel"></i></button>
+            <button onclick="exportData('prestasi', 'word')" class="bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-semibold"><i class="fa-solid fa-file-word"></i></button>
+            <button onclick="exportData('prestasi', 'pdf')" class="bg-rose-600 text-white px-3 py-2 rounded-xl text-xs font-semibold"><i class="fa-solid fa-file-pdf"></i></button>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 uppercase">
+                <th class="p-3 w-10 text-center"><input type="checkbox" id="selectAllPrestasi" onclick="toggleSelectAllPrestasi(this)"></th>
+                <th class="p-3">No</th><th class="p-3">Tanggal</th><th class="p-3">Siswa / Kelas</th><th class="p-3">Jenis & Lomba</th><th class="p-3">Juara & Tingkat</th><th class="p-3">Penyelenggara</th><th class="p-3 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="prestasiTableBody" class="divide-y divide-slate-100"></tbody>
+          </table></div>
+        </div>
+      </div>
+      
+      <!-- 6. SUBMENU KONSELING -->
+      <div id="admin-sub-konseling" class="hidden space-y-4">
+        <div class="bg-white p-4 rounded-xl border flex flex-col md:flex-row justify-between items-center gap-4">
+          <div class="flex flex-wrap gap-2 items-center w-full md:w-auto">
+            <h3 class="font-bold text-slate-700 shrink-0">Bimbingan & Konseling</h3>
+            <div class="flex flex-wrap gap-2 items-center">
+              <select id="filterKonselingLayanan" class="text-xs p-2 border rounded-lg bg-white">
+                <option value="">Semua Layanan</option>
+                <option value="Individu">Individu</option>
+                <option value="Sosial">Sosial</option>
+                <option value="Belajar">Belajar</option>
+                <option value="Karir">Karir</option>
+              </select>
+              <select id="filterKonselingKeterangan" class="text-xs p-2 border rounded-lg bg-white">
+                <option value="">Semua Keterangan</option>
+                <option value="Tuntas">Tuntas</option>
+                <option value="Proses">Proses</option>
+                <option value="Perlu Home Visit">Perlu Home Visit</option>
+                <option value="Dikembalikan ke Wali Kelas">Dikembalikan ke Wali Kelas</option>
+              </select>
+              <button onclick="renderKonselingTable()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow"><i class="fa-solid fa-filter"></i> Filter</button>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 items-center">
+            <button onclick="deleteSelectedKonseling()" class="bg-rose-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-rose-700"><i class="fa-solid fa-trash"></i> Hapus</button>
+            <button onclick="downloadKonselingTemplate()" class="bg-slate-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-slate-700"><i class="fa-solid fa-download"></i> Template Excel</button>
+            <button onclick="openKonselingModal()" class="bg-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-indigo-700"><i class="fa-solid fa-plus"></i> Tambah</button>
+            <label class="bg-emerald-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow cursor-pointer hover:bg-emerald-700 flex items-center gap-1.5"><i class="fa-solid fa-file-excel"></i> Pilih File <input type="file" id="excelKonselingFile" accept=".xlsx, .xls" class="hidden" onchange="showUploadBtn('Konseling')"></label>
+            <button id="btnUploadKonseling" onclick="handleKonselingExcelImport()" class="hidden bg-emerald-800 text-white px-3 py-2 rounded-xl text-xs font-semibold shadow hover:bg-emerald-900 transition flex items-center gap-1.5"><i class="fa-solid fa-upload"></i> Upload</button>
+            <button onclick="printKonselingReport('excel')" class="bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-semibold"><i class="fa-solid fa-file-excel"></i></button>
+            <button onclick="printKonselingReport('word')" class="bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-semibold"><i class="fa-solid fa-file-word"></i></button>
+            <button onclick="printKonselingReport('pdf')" class="bg-rose-600 text-white px-3 py-2 rounded-xl text-xs font-semibold"><i class="fa-solid fa-file-pdf"></i></button>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 uppercase">
+                <th class="p-3 w-10 text-center"><input type="checkbox" id="selectAllKonseling" onclick="toggleSelectAllKonseling(this)"></th>
+                <th class="p-3">No</th><th class="p-3">Tanggal</th><th class="p-3">Siswa / Kelas</th><th class="p-3">Permasalahan</th><th class="p-3">Layanan</th><th class="p-3">Tindak Lanjut</th><th class="p-3">Guru</th><th class="p-3">Status</th><th class="p-3 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="konselingTableBody" class="divide-y divide-slate-100"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- 7. SUBMENU CATATAN PELANGGARAN -->
+      <div id="admin-sub-catatan" class="hidden space-y-4">
+        <div class="bg-white p-4 rounded-xl border flex flex-col md:flex-row justify-between items-center gap-4">
+          <div class="flex flex-wrap gap-2 items-center w-full md:w-auto">
+            <h3 class="font-bold text-slate-700 shrink-0">Catatan Pelanggaran</h3>
+            <div class="flex flex-wrap gap-2 items-center">
+              <select id="filterCatatanKelas" class="text-xs p-2 border rounded-lg bg-white"><option value="">Semua Kelas</option></select>
+              <select id="filterCatatanJenis" class="text-xs p-2 border rounded-lg bg-white">
+                <option value="">Semua Kategori</option>
+                <option value="Ringan">Ringan</option>
+                <option value="Sedang">Sedang</option>
+                <option value="Berat">Berat</option>
+              </select>
+              <button onclick="renderCatatanTable()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow"><i class="fa-solid fa-filter"></i> Filter</button>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 items-center">
+            <button onclick="deleteSelectedCatatan()" class="bg-rose-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-rose-700"><i class="fa-solid fa-trash"></i> Hapus</button>
+            <button onclick="downloadPelanggaranTemplate()" class="bg-slate-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-slate-700"><i class="fa-solid fa-download"></i> Template Excel</button>
+            <button onclick="openCatatanModal()" class="bg-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-indigo-700"><i class="fa-solid fa-plus"></i> Tambah</button>
+            <label class="bg-emerald-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow cursor-pointer hover:bg-emerald-700 flex items-center gap-1.5"><i class="fa-solid fa-file-excel"></i> Pilih File <input type="file" id="excelCatatanFile" accept=".xlsx, .xls" class="hidden" onchange="showUploadBtn('Catatan')"></label>
+            <button id="btnUploadCatatan" onclick="handleCatatanExcelImport()" class="hidden bg-emerald-800 text-white px-3 py-2 rounded-xl text-xs font-semibold shadow hover:bg-emerald-900 transition flex items-center gap-1.5"><i class="fa-solid fa-upload"></i> Upload</button>
+            <button onclick="printPelanggaranReport('excel')" class="bg-emerald-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold" title="Export Excel"><i class="fa-solid fa-file-excel"></i></button>
+            <button onclick="printPelanggaranReport('word')" class="bg-blue-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold" title="Export Word"><i class="fa-solid fa-file-word"></i></button>
+            <button onclick="printPelanggaranReport('pdf')" class="bg-rose-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold" title="Print/PDF"><i class="fa-solid fa-file-pdf"></i></button>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 uppercase">
+                <th class="p-3 w-10 text-center"><input type="checkbox" id="selectAllCatatan" onclick="toggleSelectAllCatatan(this)"></th>
+                <th class="p-3">No</th><th class="p-3">Tanggal</th><th class="p-3">Siswa / Kelas</th><th class="p-3">Pelanggaran</th><th class="p-3">Poin</th><th class="p-3">Tindak Lanjut</th><th class="p-3">Guru Pendamping</th><th class="p-3">Status</th><th class="p-3 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="catatanTableBody" class="divide-y divide-slate-100"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- 8. SUBMENU JENIS PELANGGARAN -->
+      <div id="admin-sub-jenis" class="hidden space-y-4">
+        <div class="flex justify-between items-center bg-white p-4 rounded-xl border">
+          <h3 class="font-bold text-slate-700">Daftar Jenis Pelanggaran & Poin</h3>
+          <button onclick="openJenisModal()" class="bg-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow hover:bg-indigo-700"><i class="fa-solid fa-plus"></i> Tambah Jenis</button>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm">
+            <thead><tr class="bg-slate-100 text-slate-600 uppercase text-xs"><th class="p-3">No</th><th class="p-3">Jenis Pelanggaran</th><th class="p-3">Kategori</th><th class="p-3">Point Pelanggaran</th><th class="p-3 text-center">Aksi</th></tr></thead>
+            <tbody id="jenisTableBody" class="divide-y divide-slate-100"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- 9. SUBMENU WHATSAPP CRM & GATEWAY FONNTE -->
+      <div id="admin-sub-wa" class="hidden space-y-6">
+        <div class="bg-gradient-to-r from-emerald-700 via-teal-800 to-slate-900 rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row justify-between items-center gap-6">
+          <div class="space-y-1">
+            <span class="bg-emerald-400/20 text-emerald-200 border border-emerald-400/30 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Modul Notifikasi Otomatis</span>
+            <h3 class="text-xl sm:text-2xl font-extrabold">WhatsApp Gateway & CRM Wali Murid</h3>
+            <p class="text-xs sm:text-sm text-emerald-100">Notifikasi presensi hadir/alpa otomatis ke nomor WhatsApp orang tua/wali murid dengan Fonnte API.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="cekStatusFonnte()" id="btnCekFonnte" class="bg-white text-emerald-800 font-bold px-4 py-2 rounded-xl text-xs shadow hover:bg-emerald-50 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-signal"></i> Cek Koneksi Fonnte
+            </button>
+          </div>
+        </div>
+
+        <!-- Kartu Status Device & Kuota WA -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-xs text-slate-400 font-semibold uppercase">Status Gateway</span>
+              <span id="waDeviceBadge" class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Belum Dicek</span>
+            </div>
+            <div id="waDeviceName" class="text-lg font-bold text-slate-800">-</div>
+            <p id="waDeviceDesc" class="text-xs text-slate-500">Klik "Cek Koneksi Fonnte" untuk memeriksa status.</p>
+          </div>
+          <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-2">
+            <span class="text-xs text-slate-400 font-semibold uppercase">Nomor WhatsApp Pengirim</span>
+            <div id="waSenderNumber" class="text-lg font-bold text-emerald-600">-</div>
+            <p class="text-xs text-slate-500">Nomor resmi pengirim notifikasi sekolah</p>
+          </div>
+          <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-2">
+            <span class="text-xs text-slate-400 font-semibold uppercase">Sisa Kuota / Masa Aktif</span>
+            <div id="waQuotaInfo" class="text-lg font-bold text-slate-800">-</div>
+            <p class="text-xs text-slate-500">Kuota pesan API Fonnte</p>
+          </div>
+        </div>
+
+        <!-- Form Konfigurasi Token Fonnte & Uji Coba Kirim -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+            <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fa-solid fa-key text-emerald-600"></i> Pengaturan Token API Fonnte</h4>
+            <p class="text-xs text-slate-500">Token disimpan dengan aman di <code>Script Properties</code> server Google Apps Script (Zero Hardcoded Secrets).</p>
+            <form onsubmit="simpanTokenFonnte(event)" class="space-y-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Fonnte API Token</label>
+                <div class="relative">
+                  <input type="password" id="inputFonnteToken" placeholder="Masukkan token Fonnte Anda..." class="w-full p-2.5 pr-10 border rounded-xl text-xs font-mono">
+                  <button type="button" onclick="toggleTokenVisibility()" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs">
+                    <i class="fa-solid fa-eye" id="iconEyeToken"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="flex justify-end gap-2 pt-1">
+                <button type="submit" id="btnSaveTokenFonnte" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-floppy-disk"></i> Simpan Token ke Server
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+            <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fa-solid fa-paper-plane text-indigo-600"></i> Uji Coba Kirim Pesan WhatsApp</h4>
+            <p class="text-xs text-slate-500">Kirim pesan uji coba untuk memverifikasi gateway siap digunakan.</p>
+            <form onsubmit="handleTestSendWA(event)" class="space-y-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Nomor WhatsApp Penerima (Contoh: 08123456789)</label>
+                <input type="text" id="testWaTarget" required placeholder="08..." class="w-full p-2.5 border rounded-xl text-xs">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Isi Pesan Test</label>
+                <textarea id="testWaMessage" rows="2" required class="w-full p-2.5 border rounded-xl text-xs" placeholder="Halo dari SPILSA PRO! Tes notifikasi WhatsApp berhasil."></textarea>
+              </div>
+              <div class="flex justify-end">
+                <button type="submit" id="btnSubmitTestWA" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-paper-plane"></i> Kirim Pesan Uji Coba
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Matriks Template Notifikasi Otomatis -->
+        <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+          <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fa-solid fa-bolt text-amber-500"></i> Matriks Notifikasi WhatsApp Otomatis</h4>
+          <p class="text-xs text-slate-500">Notifikasi di bawah ini akan diantrikan non-blocking (~20ms) dan dikirimkan otomatis oleh background trigger tanpa membuat UI menunggu.</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-slate-50 p-4 rounded-xl border space-y-1.5">
+              <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Presensi Masuk (Hadir)</span>
+              <h5 class="font-bold text-xs text-slate-800">Kehadiran Siswa</h5>
+              <p class="text-[11px] text-slate-500">Terkirim ke WhatsApp orang tua saat siswa melakukan presensi (barcode/wajah/mandiri).</p>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-xl border space-y-1.5">
+              <span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Presensi Tidak Hadir</span>
+              <h5 class="font-bold text-xs text-slate-800">Sakit / Izin / Alpa</h5>
+              <p class="text-[11px] text-slate-500">Konfirmasi status kehadiran siswa yang tercatat oleh guru atau wali kelas.</p>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-xl border space-y-1.5">
+              <span class="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Apresiasi Siswa</span>
+              <h5 class="font-bold text-xs text-slate-800">Prestasi Baru</h5>
+              <p class="text-[11px] text-slate-500">Pemberitahuan ucapan selamat atas raihan juara atau prestasi ke orang tua.</p>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-xl border space-y-1.5">
+              <span class="bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Bimbingan Karakter</span>
+              <h5 class="font-bold text-xs text-slate-800">Catatan Pelanggaran</h5>
+              <p class="text-[11px] text-slate-500">Pemberitahuan transparan dan koordinasi pembinaan karakter siswa kepada wali murid.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Blast Pengumuman Massal -->
+        <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+          <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fa-solid fa-bullhorn text-pink-600"></i> Kirim Pesan Pengumuman Massal (Blast)</h4>
+          <p class="text-xs text-slate-500">Kirim pengumuman penting sekolah kepada seluruh orang tua siswa atau kelas tertentu.</p>
+          <form onsubmit="handleBlastWAPengumuman(event)" class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Target Penerima</label>
+                <select id="blastWaTargetGroup" class="w-full p-2.5 border rounded-xl text-xs bg-white">
+                  <option value="all">Semua Orang Tua / Wali Murid Siswa</option>
+                  <option value="guru">Semua Dewan Guru & Tenaga Kependidikan</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Filter Rombel (Opsional)</label>
+                <select id="blastWaKelasFilter" class="w-full p-2.5 border rounded-xl text-xs bg-white">
+                  <option value="">Semua Rombel</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Isi Pesan Pengumuman</label>
+              <textarea id="blastWaContent" rows="3" required placeholder="Tuliskan isi pengumuman sekolah di sini..." class="w-full p-2.5 border rounded-xl text-xs"></textarea>
+            </div>
+            <div class="flex justify-end">
+              <button type="submit" id="btnSubmitBlastWA" class="bg-pink-600 hover:bg-pink-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow transition flex items-center gap-1.5">
+                <i class="fa-solid fa-paper-plane"></i> Antrikan Blast WhatsApp
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- 10. SUBMENU MIGRASI DATABASE SPREADSHEET -->
+      <div id="admin-sub-migrasi" class="hidden space-y-6">
+        <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row justify-between items-center gap-6">
+          <div class="space-y-1">
+            <span class="bg-purple-400/20 text-purple-200 border border-purple-400/30 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Pola Migrasi Idempoten</span>
+            <h3 class="text-xl sm:text-2xl font-extrabold">Migrasi & Sinkronisasi Database Spreadsheet</h3>
+            <p class="text-xs sm:text-sm text-purple-100">Pindahkan data dari spreadsheet SPILSA lama ke format baru secara aman berbasis nama header tanpa merusak file lama.</p>
+          </div>
+        </div>
+
+        <!-- Form Input ID Spreadsheet Sumber & Tombol Tindakan -->
+        <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+          <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fa-solid fa-file-excel text-emerald-600"></i> Spreadsheet Sumber Data (Lama)</h4>
+          <p class="text-xs text-slate-500">Salin ID spreadsheet lama dari URL Google Sheets (karakter acak panjang antara <code>/d/</code> dan <code>/edit</code>).</p>
+          
+          <div class="flex flex-col sm:flex-row gap-3">
+            <input type="text" id="inputSourceSpreadsheetId" placeholder="Contoh: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms" class="flex-grow p-3 border rounded-xl text-xs font-mono">
+            <button onclick="handleDryRunMigrasi()" id="btnDryRunMigrasi" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow transition flex items-center justify-center gap-2 shrink-0">
+              <i class="fa-solid fa-magnifying-glass"></i> 1. Pindai Database (Dry Run)
+            </button>
+            <button onclick="handleExecuteMigrasi()" id="btnExecuteMigrasi" disabled class="bg-purple-600 hover:bg-purple-700 disabled:bg-slate-300 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow transition flex items-center justify-center gap-2 shrink-0">
+              <i class="fa-solid fa-bolt"></i> 2. Eksekusi Migrasi Idempoten
+            </button>
+          </div>
+        </div>
+
+        <!-- Hasil Pemindaian / Dry Run Report -->
+        <div id="migrationReportCard" class="hidden bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+          <div class="flex justify-between items-center border-b pb-3">
+            <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fa-solid fa-list-check text-indigo-600"></i> Laporan Analisis Kolom & Baris Data</h4>
+            <span id="migrationStatusBadge" class="bg-indigo-50 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full">Siap Dimigrasi</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-100 text-slate-600 uppercase">
+                  <th class="p-3">Nama Sheet</th>
+                  <th class="p-3">Jumlah Baris Sumber</th>
+                  <th class="p-3">Kunci Unik (Upsert)</th>
+                  <th class="p-3">Baris Baru (Insert)</th>
+                  <th class="p-3">Baris Diperbarui (Update)</th>
+                  <th class="p-3">Status</th>
+                </tr>
+              </thead>
+              <tbody id="migrationSummaryTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+
+          <div id="migrationLogTerminal" class="bg-slate-900 text-slate-100 p-4 rounded-xl text-xs font-mono max-h-48 overflow-y-auto space-y-1"></div>
+        </div>
+      </div>
+
+      <!-- 11. SUBMENU PENGATURAN PASSWORD -->
+      <div id="admin-sub-password" class="hidden space-y-4">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 max-w-lg mx-auto mt-8">
+          <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-key text-indigo-600"></i> Pengaturan Password Admin</h3>
+          <form onsubmit="handlePasswordUpdate(event)" class="space-y-4">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1">Password Lama</label>
+              <input type="password" id="oldPassword" required class="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1">Password Baru</label>
+              <input type="password" id="newPassword" required minlength="6" class="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1">Konfirmasi Password Baru</label>
+              <input type="password" id="confirmPassword" required minlength="6" class="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div id="passwordErrorMsg" class="text-rose-500 text-xs hidden"></div>
+            <div class="pt-2">
+              <button type="submit" id="btnUpdatePassword" class="w-full py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow hover:bg-indigo-700 transition">Simpan Password Baru</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- PORTAL SISWA MANDIRI                       -->
+    <!-- ========================================== -->
+    <section id="tab-siswa" class="hidden space-y-6">
+      
+      <!-- 1. LOGIN SISWA CONTAINER -->
+      <div id="studentLoginContainer" class="max-w-md mx-auto my-8 bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-100 space-y-6">
+        <div class="text-center space-y-2">
+          <div class="w-16 h-16 bg-gradient-to-tr from-purple-600 to-pink-500 rounded-2xl flex items-center justify-center mx-auto text-white text-2xl shadow-lg">
+            <i class="fa-solid fa-id-badge"></i>
+          </div>
+          <h2 class="text-xl font-extrabold text-slate-800">Portal Siswa Digital</h2>
+          <p class="text-xs text-slate-500">Masuk untuk absensi scan wajah mandiri dan melihat rekap kehadiran, prestasi, serta catatan tata tertib Anda.</p>
+        </div>
+
+        <form onsubmit="handleStudentLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">NISN (Nomor Induk Siswa Nasional)</label>
+            <div class="relative">
+              <i class="fa-solid fa-address-card absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+              <input type="text" id="loginNisn" required placeholder="Contoh: 0098765432" class="w-full pl-10 pr-3 py-2.5 border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-purple-400">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal Lahir Siswa</label>
+            <div class="relative">
+              <i class="fa-solid fa-calendar-day absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+              <input type="date" id="loginTglLahir" required class="w-full pl-10 pr-3 py-2.5 border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-purple-400">
+            </div>
+            <span class="text-[10px] text-slate-400 mt-1 block">Pilih tanggal lahir sesuai dengan data dapodik/sekolah.</span>
+          </div>
+
+          <div id="studentLoginAlert" class="hidden p-3 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200"></div>
+
+          <button type="submit" id="btnStudentLoginSubmit" class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl text-xs shadow-lg hover:from-purple-700 hover:to-pink-700 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i> Masuk ke Portal Siswa
+          </button>
+        </form>
+      </div>
+
+      <!-- 2. DASHBOARD SISWA CONTAINER (SETELAH LOGIN) -->
+      <div id="studentDashboardContainer" class="hidden space-y-6">
+        
+        <!-- Header Info Siswa -->
+        <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row justify-between items-center gap-6">
+          <div class="flex items-center gap-4">
+            <img id="portalStudentAvatar" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-pink-500 object-cover bg-white shadow-md" alt="Foto Siswa">
+            <div>
+              <span id="portalStudentRombel" class="bg-pink-500/40 text-pink-200 border border-pink-400/50 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase">Kelas</span>
+              <h2 id="portalStudentNama" class="text-lg sm:text-2xl font-extrabold mt-1">Nama Siswa</h2>
+              <div class="text-xs text-indigo-200 flex flex-wrap gap-x-4 gap-y-1 mt-0.5">
+                <span>NISN: <b id="portalStudentNisn">-</b></span>
+                <span>NIPD: <b id="portalStudentNipd">-</b></span>
+                <span>TTL: <b id="portalStudentTtl">-</b></span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="previewMyStudentCard()" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl text-xs border border-white/20 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-id-card"></i> Lihat Kartu Pelajar
+            </button>
+            <button onclick="studentLogout()" class="bg-rose-500/80 hover:bg-rose-600 text-white font-semibold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i> Keluar
+            </button>
+          </div>
+        </div>
+
+        <!-- Menu Tabs Siswa -->
+        <div class="flex space-x-2 border-b pb-2 overflow-x-auto hide-scrollbar">
+          <button onclick="switchStudentPortalTab('absen')" id="studentTabBtn-absen" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-indigo-600 text-white transition flex items-center gap-2 shrink-0">
+            <i class="fa-solid fa-camera"></i> Absen Wajah Mandiri
+          </button>
+          <button onclick="switchStudentPortalTab('kehadiran')" id="studentTabBtn-kehadiran" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0">
+            <i class="fa-solid fa-clipboard-check"></i> Rekap Kehadiran
+          </button>
+          <button onclick="switchStudentPortalTab('prestasi')" id="studentTabBtn-prestasi" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0">
+            <i class="fa-solid fa-trophy"></i> Rekap Prestasi
+          </button>
+          <button onclick="switchStudentPortalTab('pelanggaran')" id="studentTabBtn-pelanggaran" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0">
+            <i class="fa-solid fa-shield-cat"></i> Rekap Tata Tertib
+          </button>
+        </div>
+
+        <!-- TAB 1: ABSEN SCAN WAJAH MANDIRI + GEOLOCATION -->
+        <div id="studentPortal-absen" class="space-y-6">
+          <div class="bg-white rounded-3xl p-6 sm:p-8 border shadow-sm max-w-xl mx-auto space-y-5 text-center">
+            <div>
+              <h3 class="text-base sm:lg font-bold text-slate-800">Presensi Wajah Mandiri</h3>
+              <p class="text-xs text-slate-500 mt-1">Pastikan kamera aktif dan Anda berada di area lingkungan sekolah.</p>
+            </div>
+
+            <!-- Kamera Live & Frame -->
+            <div class="relative w-full aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-inner mx-auto">
+              <video id="studentSelfieVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+              <canvas id="studentSelfieCanvas" class="hidden"></canvas>
+              
+              <!-- Frame Oval Wajah -->
+              <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div class="w-44 h-56 border-2 border-dashed border-pink-400 rounded-full shadow-lg"></div>
+              </div>
+
+              <!-- Camera Loading Spinner -->
+              <div id="cameraLoadingSpinner" class="absolute inset-0 bg-slate-900/80 flex items-center justify-center text-white text-xs font-semibold gap-2 hidden">
+                <i class="fa-solid fa-spinner fa-spin text-lg"></i> Mengaktifkan kamera...
+              </div>
+            </div>
+
+            <!-- Geolocation Status Card -->
+            <div id="studentGeoStatusCard" class="bg-slate-50 p-4 rounded-2xl border text-xs text-left space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-700 flex items-center gap-1.5"><i class="fa-solid fa-location-crosshairs text-indigo-600"></i> Validasi Lokasi Sekolah</span>
+                <span id="geoStatusBadge" class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-[10px] font-bold">Mengecek GPS...</span>
+              </div>
+              <p id="geoDistanceText" class="text-slate-600 text-xs">Mendeteksi koordinat lokasi terkini perangkat Anda...</p>
+            </div>
+
+            <!-- Tombol Absen Mandiri -->
+            <div>
+              <button onclick="submitStudentSelfPresensi()" id="btnSubmitSelfPresensi" disabled class="w-full py-3 bg-indigo-600 disabled:bg-slate-300 text-white font-bold rounded-xl text-xs sm:text-sm shadow-lg hover:bg-indigo-700 transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-camera"></i> Ambil Foto Wajah & Absen Sekarang
+              </button>
+              <p id="selfPresensiTip" class="text-[11px] text-slate-400 mt-2">Tombol akan aktif otomatis saat lokasi Anda berada di radius sekolah.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: REKAP KEHADIRAN SAYA -->
+        <div id="studentPortal-kehadiran" class="hidden space-y-6">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-white p-4 rounded-2xl border shadow-sm">
+              <span class="text-xs text-slate-400 font-semibold">Persentase Hadir</span>
+              <div id="myStudentPersen" class="text-2xl font-extrabold text-indigo-600 mt-1">0%</div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border shadow-sm">
+              <span class="text-xs text-slate-400 font-semibold">Hadir</span>
+              <div id="myStudentHadir" class="text-2xl font-extrabold text-emerald-600 mt-1">0</div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border shadow-sm">
+              <span class="text-xs text-slate-400 font-semibold">Sakit / Izin</span>
+              <div id="myStudentSakitIzin" class="text-2xl font-extrabold text-amber-500 mt-1">0</div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border shadow-sm">
+              <span class="text-xs text-slate-400 font-semibold">Alpa</span>
+              <div id="myStudentAlpa" class="text-2xl font-extrabold text-rose-500 mt-1">0</div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+            <div class="p-4 border-b flex justify-between items-center">
+              <h4 class="font-bold text-slate-800 text-xs sm:text-sm">Riwayat Presensi Saya</h4>
+              <button onclick="renderStudentMyPresensi()" class="text-xs text-indigo-600 font-semibold hover:underline"><i class="fa-solid fa-rotate-right mr-1"></i> Segarkan</button>
+            </div>
+            <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-100 text-slate-600 uppercase">
+                  <th class="p-3">No</th>
+                  <th class="p-3">Tanggal & Jam</th>
+                  <th class="p-3">Metode</th>
+                  <th class="p-3">Status</th>
+                  <th class="p-3 text-center">Foto Absen</th>
+                  <th class="p-3">Keterangan</th>
+                </tr>
+              </thead>
+              <tbody id="myPresensiTableBody" class="divide-y divide-slate-100"></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <!-- TAB 3: REKAP PRESTASI SAYA -->
+        <div id="studentPortal-prestasi" class="hidden space-y-4">
+          <div class="bg-white p-4 rounded-xl border flex justify-between items-center">
+            <h4 class="font-bold text-slate-800 text-xs sm:text-sm">Prestasi & Penghargaan Saya</h4>
+            <span id="myPrestasiCount" class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-bold">0 Prestasi</span>
+          </div>
+          <div id="myPrestasiContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- TAB 4: REKAP PELANGGARAN SAYA -->
+        <div id="studentPortal-pelanggaran" class="hidden space-y-4">
+          <div class="bg-white p-4 rounded-xl border flex justify-between items-center">
+            <div>
+              <h4 class="font-bold text-slate-800 text-xs sm:text-sm">Catatan Tata Tertib & Pelanggaran</h4>
+              <p class="text-xs text-slate-400">Poin dievaluasi berkala untuk pembinaan karakter siswa.</p>
+            </div>
+            <div class="text-right">
+              <span class="text-xs text-slate-400 block font-medium">Total Akumulasi Poin</span>
+              <span id="myTotalPoin" class="text-xl font-extrabold text-rose-600">0 Poin</span>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+            <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-100 text-slate-600 uppercase">
+                  <th class="p-3">No</th>
+                  <th class="p-3">Tanggal</th>
+                  <th class="p-3">Pelanggaran</th>
+                  <th class="p-3">Kategori</th>
+                  <th class="p-3">Poin</th>
+                  <th class="p-3">Tindak Lanjut</th>
+                  <th class="p-3">Guru Pendamping</th>
+                  <th class="p-3">Status</th>
+                </tr>
+              </thead>
+              <tbody id="myPelanggaranTableBody" class="divide-y divide-slate-100"></tbody>
+            </table></div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer Profesional -->
+  <footer class="bg-slate-900 text-white mt-12 py-8 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 text-center space-y-2">
+      <p id="footerTitle" class="text-sm font-semibold">&copy; 2026 SD Negeri Pilangrejo 1 - Kabupaten Demak, Jawa Tengah.</p>
+      <p class="text-xs text-slate-400">Sistem Informasi Manajemen & Portal Web Sekolah Terpadu (SPILSA PRO)</p>
+    </div>
+  </footer>
+
+  <!-- MODAL DETAIL BERITA / PENGUMUMAN / AGENDA -->
+  <div id="beritaDetailModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <span id="modalBeritaKategori" class="bg-indigo-50 text-indigo-600 text-xs font-bold px-3 py-1 rounded-full">Kategori</span>
+        <button onclick="closeBeritaDetailModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <div class="w-full aspect-16-9 rounded-2xl overflow-hidden shadow-inner">
+        <img id="modalBeritaFoto" src="" alt="Foto Content" class="w-full h-full object-cover">
+      </div>
+      <div>
+        <div id="modalBeritaTanggal" class="text-xs text-slate-400 mb-1"><i class="fa-regular fa-calendar mr-1"></i> Tanggal</div>
+        <h2 id="modalBeritaJudul" class="text-xl font-extrabold text-slate-800 leading-snug">Judul Konten</h2>
+      </div>
+      <div id="modalBeritaKonten" class="text-slate-600 text-sm leading-relaxed content-html overflow-x-hidden"></div>
+      <div class="flex flex-col sm:flex-row justify-between items-center pt-4 border-t border-slate-100 gap-4">
+        <div class="flex items-center space-x-2.5">
+          <span class="text-xs font-semibold text-slate-500 mr-1">Bagikan:</span>
+          <button onclick="shareTo('wa')" class="w-8 h-8 rounded-full bg-[#25D366] text-white flex items-center justify-center hover:scale-110 transition shadow tooltip" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
+          <button onclick="shareTo('fb')" class="w-8 h-8 rounded-full bg-[#1877F2] text-white flex items-center justify-center hover:scale-110 transition shadow tooltip" title="Facebook"><i class="fa-brands fa-facebook-f"></i></button>
+          <button onclick="shareTo('x')" class="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center hover:scale-110 transition shadow tooltip" title="X (Twitter)"><i class="fa-brands fa-x-twitter"></i></button>
+          <button onclick="shareTo('email')" class="w-8 h-8 rounded-full bg-rose-500 text-white flex items-center justify-center hover:scale-110 transition shadow tooltip" title="Email"><i class="fa-solid fa-envelope"></i></button>
+          <button onclick="shareContentLink()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 hover:scale-110 transition shadow border border-slate-200" title="Salin Tautan"><i class="fa-solid fa-link"></i></button>
+        </div>
+        <button onclick="closeBeritaDetailModal()" class="px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow hover:bg-indigo-700 w-full sm:w-auto">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DETAIL PRESTASI SEKOLAH -->
+  <div id="allPrestasiModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-trophy text-amber-500"></i> Daftar Seluruh Prestasi Siswa</h3>
+        <button onclick="closeAllPrestasiModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs">
+        <thead><tr class="bg-slate-100 text-slate-600 uppercase"><th class="p-3">No</th><th class="p-3">Tanggal</th><th class="p-3">Siswa / Kelas</th><th class="p-3">Jenis & Lomba</th><th class="p-3">Juara & Tingkat</th><th class="p-3">Penyelenggara</th></tr></thead>
+        <tbody id="portalPrestasiTableBody" class="divide-y divide-slate-100"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- MODAL LOGIN ADMIN -->
+  <div id="loginModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+      <div class="text-center">
+        <div class="bg-indigo-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-indigo-600 text-xl font-bold"><i class="fa-solid fa-lock"></i></div>
+        <h3 class="text-lg font-bold text-slate-800">Login Administrator</h3>
+      </div>
+      <form onsubmit="handleAdminLogin(event)" class="space-y-3">
+        <input type="password" id="adminPasswordInput" placeholder="Password Admin" required class="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500">
+        <div id="loginErrorMsg" class="text-rose-500 text-xs hidden text-center"></div>
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeLoginModal()" class="w-1/2 py-2.5 border rounded-xl text-sm font-medium">Batal</button>
+          <button type="submit" class="w-1/2 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium shadow">Masuk</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL CMS FORM (BERITA / PENGUMUMAN / AGENDA) -->
+  <div id="webCMSModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="webCMSModalTitle" class="text-base font-bold text-slate-800">Tambah Content Web</h3>
+        <button onclick="closeWebCMSModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <form id="webCMSForm" onsubmit="handleWebCMSFormSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="webCMSRowId">
+        <div><label class="block font-semibold mb-1">Tipe Content</label><select id="webCMSTipe" required class="w-full p-2.5 border rounded-lg"><option value="Berita">Berita</option><option value="Pengumuman">Pengumuman</option><option value="Agenda">Agenda</option></select></div>
+        <div><label class="block font-semibold mb-1">Judul Konten</label><input type="text" id="webCMSJudul" required class="w-full p-2.5 border rounded-lg"></div>
+        <div>
+          <label class="block font-semibold mb-1">Upload Foto (Rasio 16:9 - Google Drive)</label>
+          <input type="file" id="webCMSFotoFile" accept="image/*" class="w-full p-2 border rounded-lg text-xs">
+          <input type="hidden" id="webCMSFotoUrl">
+        </div>
+        <div><label class="block font-semibold mb-1">Tanggal</label><input type="date" id="webCMSTanggal" required class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Kategori</label><input type="text" id="webCMSKategori" required class="w-full p-2.5 border rounded-lg" placeholder="Contoh: Pengumuman / Kegiatan"></div>
+        <div>
+          <label class="block font-semibold mb-1">Isi Konten</label>
+          <div id="webCMSKontenEditor" class="bg-white" style="height: 200px;"></div>
+          <input type="hidden" id="webCMSKonten">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeWebCMSModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow">Simpan Konten</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL GALERI FOTO FORM -->
+  <div id="galeriModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="galeriModalTitle" class="text-base font-bold text-slate-800">Tambah Foto Galeri</h3>
+        <button onclick="closeGaleriModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <form id="galeriForm" onsubmit="handleGaleriFormSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="galeriRowId">
+        <div><label class="block font-semibold mb-1">Judul / Keterangan Foto</label><input type="text" id="galeriJudul" required class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Kategori Foto</label><input type="text" id="galeriKategori" required placeholder="Fasilitas / Kegiatan / Ekstrakurikuler" class="w-full p-2.5 border rounded-lg"></div>
+        <div>
+          <label class="block font-semibold mb-1">Upload Foto Galeri (Rasio 16:9)</label>
+          <input type="file" id="galeriFotoFile" accept="image/*" class="w-full p-2 border rounded-lg text-xs">
+          <input type="hidden" id="galeriUrl">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeGaleriModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow">Simpan Foto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL PROFIL PENDIDIK -->
+  <div id="staffModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="staffModalTitle" class="text-base font-bold text-slate-800">Tambah Profil Guru</h3>
+        <button onclick="closeStaffModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <form id="staffForm" onsubmit="handleStaffFormSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="staffRowId">
+        <div>
+          <label class="block font-semibold mb-1">Pilih Guru (Dari Master Data Guru)</label>
+          <select id="staffGuruSelect" onchange="onStaffGuruSelected()" class="w-full p-2.5 border rounded-lg"><option value="">-- Pilih Guru --</option></select>
+        </div>
+        <input type="hidden" id="staffNamaGuru">
+        <div><label class="block font-semibold mb-1">NIP Guru</label><input type="text" id="staffNip" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Jabatan / Tugas Mengajar</label><input type="text" id="staffJabatan" required class="w-full p-2.5 border rounded-lg" placeholder="Contoh: Guru Kelas 5A"></div>
+        <div>
+          <label class="block font-semibold mb-1">Upload Foto Guru</label>
+          <input type="file" id="staffFotoFile" accept="image/*" class="w-full p-2 border rounded-lg text-xs">
+          <input type="hidden" id="staffFotoUrl">
+        </div>
+        <div><label class="block font-semibold mb-1">Keterangan Tambahan</label><input type="text" id="staffKeterangan" class="w-full p-2.5 border rounded-lg"></div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeStaffModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow">Simpan Pendidik</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL FORM SISWA -->
+  <div id="studentModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4 border-b pb-3">
+        <h3 id="studentModalTitle" class="text-lg font-bold text-slate-800">Tambah Data Siswa</h3>
+        <button onclick="closeStudentModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <form id="studentForm" onsubmit="handleStudentFormSubmit(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
+        <input type="hidden" id="studentRowId">
+        <div><label class="block font-semibold mb-1">Nama Lengkap</label><input type="text" id="nama" required class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">NISN</label><input type="text" id="nisn" required class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">NIPD</label><input type="text" id="nipd" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Jenis Kelamin</label><select id="jenisKelamin" class="w-full p-2.5 border rounded-lg"><option value="L">Laki-laki</option><option value="P">Perempuan</option></select></div>
+        <div><label class="block font-semibold mb-1">Tempat Lahir</label><input type="text" id="tempatLahir" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Tanggal Lahir</label><input type="date" id="tanggalLahir" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">NIK</label><input type="text" id="nik" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Agama</label><input type="text" id="agama" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Rombel Saat Ini (Kelas)</label><select id="rombel" required class="w-full p-2.5 border rounded-lg"><option value="">Pilih Kelas</option></select></div>
+        <div class="sm:col-span-2"><label class="block font-semibold mb-1">Alamat</label><textarea id="alamat" rows="2" class="w-full p-2.5 border rounded-lg"></textarea></div>
+        <div><label class="block font-semibold mb-1">Nomer HP / WhatsApp Orang Tua</label><input type="text" id="nomerHp" class="w-full p-2.5 border rounded-lg" placeholder="08..."></div>
+        <div><label class="block font-semibold mb-1">Nama Ayah</label><input type="text" id="namaAyah" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Nama Ibu</label><input type="text" id="namaIbu" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Sekolah Asal</label><input type="text" id="sekolahAsal" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Anak ke-berapa</label><input type="number" id="anakKe" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Jumlah Saudara Kandung</label><input type="number" id="jmlSaudara" class="w-full p-2.5 border rounded-lg"></div>
+        <div class="sm:col-span-2 flex justify-end gap-2 mt-4">
+          <button type="button" onclick="closeStudentModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow">Simpan Siswa</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL FORM GURU -->
+  <div id="teacherModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4 border-b pb-3">
+        <h3 id="teacherModalTitle" class="text-lg font-bold text-slate-800">Tambah Data Guru</h3>
+        <button onclick="closeTeacherModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <form id="teacherForm" onsubmit="handleTeacherFormSubmit(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
+        <input type="hidden" id="teacherRowId">
+        <div><label class="block font-semibold mb-1">NIP</label><input type="text" id="teacherNip" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Nama Guru</label><input type="text" id="teacherNama" required class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Tempat Lahir</label><input type="text" id="teacherTempatLahir" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Tanggal Lahir</label><input type="date" id="teacherTanggalLahir" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">NIK</label><input type="text" id="teacherNik" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Jabatan</label><input type="text" id="teacherJabatan" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">No. HP / WhatsApp</label><input type="text" id="teacherNoHp" class="w-full p-2.5 border rounded-lg" placeholder="08..."></div>
+        <div><label class="block font-semibold mb-1">Alamat Email</label><input type="email" id="teacherEmail" class="w-full p-2.5 border rounded-lg"></div>
+        <div class="sm:col-span-2"><label class="block font-semibold mb-1">Alamat Rumah</label><textarea id="teacherAlamat" rows="2" class="w-full p-2.5 border rounded-lg"></textarea></div>
+        <div><label class="block font-semibold mb-1">Jumlah Anak</label><input type="number" id="teacherJumlahAnak" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">TMT CPNS</label><input type="date" id="teacherTmtCpns" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">TMT PNS</label><input type="date" id="teacherTmtPns" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">NUPTK</label><input type="text" id="teacherNuptk" class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Pendidikan Terakhir</label><input type="text" id="teacherPendidikan" class="w-full p-2.5 border rounded-lg"></div>
+        <div class="sm:col-span-2 flex justify-end gap-2 mt-4">
+          <button type="button" onclick="closeTeacherModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow">Simpan Guru</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL FORM KELAS -->
+  <div id="classModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="classModalTitle" class="text-base font-bold text-slate-800">Tambah Kelas</h3>
+        <button onclick="closeClassModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <form id="classForm" onsubmit="handleClassFormSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="classRowId">
+        <div><label class="block font-semibold mb-1">Nama Kelas / Rombel</label><input type="text" id="inputNamaKelas" required class="w-full p-2.5 border rounded-lg"></div>
+        <div><label class="block font-semibold mb-1">Wali Kelas</label><select id="inputWaliKelas" class="w-full p-2.5 border rounded-lg"><option value="">Pilih Wali Kelas</option></select></div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeClassModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL FORM PRESTASI -->
+  <div id="prestasiModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="prestasiModalTitle" class="text-base font-bold text-slate-800">Tambah Prestasi Siswa</h3>
+        <button onclick="closePrestasiModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <form id="prestasiForm" onsubmit="handlePrestasiFormSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="prestasiRowId">
+        <div><label class="block font-semibold mb-1">Tanggal</label><input type="date" id="inputPrestasiTanggal" required class="w-full p-2.5 border rounded-lg"></div>
+        
+        <div class="relative">
+          <label class="block font-semibold mb-1">Ketik & Cari Nama / NISN Siswa</label>
+          <input type="text" id="prestasiSiswaSearchInput" oninput="filterPrestasiStudentList()" placeholder="Ketik nama siswa..." class="w-full p-2.5 border rounded-lg">
+          <div id="prestasiStudentSuggestions" class="absolute z-15 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 overflow-y-auto hidden mt-1"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block font-semibold mb-1">Kelas</label><input type="text" id="inputPrestasiKelas" readonly class="w-full p-2.5 border rounded-lg bg-slate-100"></div>
+          <div><label class="block font-semibold mb-1">NISN</label><input type="text" id="prestasiNisn" readonly class="w-full p-2.5 border rounded-lg bg-slate-100"></div>
+        </div>
+        <input type="hidden" id="inputPrestasiNamaSiswa">
+        <div>
+          <label class="block font-semibold mb-1">Jenis Prestasi</label>
+          <select id="inputPrestasiJenis" required class="w-full p-2.5 border rounded-lg"><option value="Akademik">Akademik</option><option value="Non-Akademik">Non-Akademik</option></select>
+        </div>
+        <div><label class="block font-semibold mb-1">Nama Lomba</label><input type="text" id="inputPrestasiLomba" required class="w-full p-2.5 border rounded-lg"></div>
+        <div>
+          <label class="block font-semibold mb-1">Juara yang Diraih</label>
+          <select id="inputPrestasiJuara" required class="w-full p-2.5 border rounded-lg"><option value="Juara 1">Juara 1</option><option value="Juara 2">Juara 2</option><option value="Juara 3">Juara 3</option><option value="Juara 4">Juara 4</option><option value="Juara 5">Juara 5</option><option value="Juara 6">Juara 6</option><option value="Partisipan">Partisipan</option></select>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Tingkat Wilayah</label>
+          <select id="inputPrestasiTingkat" required class="w-full p-2.5 border rounded-lg"><option value="Sekolah">Sekolah</option><option value="Gugus">Gugus</option><option value="Kecamatan">Kecamatan</option><option value="Kabupaten/Kota">Kabupaten/Kota</option><option value="Provinsi">Provinsi</option><option value="Nasional">Nasional</option><option value="Internasional">Internasional</option></select>
+        </div>
+        <div><label class="block font-semibold mb-1">Penyelenggara Kegiatan</label><input type="text" id="inputPrestasiPenyelenggara" required class="w-full p-2.5 border rounded-lg"></div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closePrestasiModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow">Simpan Prestasi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL FORM JENIS PELANGGARAN -->
+  <div id="jenisModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="jenisModalTitle" class="text-base font-bold text-slate-800">Tambah Jenis Pelanggaran</h3>
+        <button onclick="closeJenisModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <form id="jenisForm" onsubmit="handleJenisFormSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="jenisRowId">
+        <div><label class="block font-semibold mb-1">Jenis Pelanggaran</label><input type="text" id="inputJenisNama" required class="w-full p-2.5 border rounded-lg"></div>
+        <div>
+          <label class="block font-semibold mb-1">Kategori Pelanggaran</label>
+          <select id="inputJenisKategori" class="w-full p-2.5 border rounded-lg"><option value="Ringan">Ringan</option><option value="Sedang">Sedang</option><option value="Berat">Berat</option></select>
+        </div>
+        <div><label class="block font-semibold mb-1">Point Pelanggaran</label><input type="number" id="inputJenisPoin" required class="w-full p-2.5 border rounded-lg"></div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeJenisModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL FORM CATATAN PELANGGARAN -->
+  <div id="catatanModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="catatanModalTitle" class="text-base font-bold text-slate-800">Tambah Catatan Pelanggaran</h3>
+        <button onclick="closeCatatanModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <form id="catatanForm" onsubmit="handleCatatanFormSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="catatanRowId">
+        <div><label class="block font-semibold mb-1">Tanggal</label><input type="date" id="catatanTanggal" required class="w-full p-2.5 border rounded-lg"></div>
+        
+        <div class="relative">
+          <label class="block font-semibold mb-1">Ketik & Cari Nama / NISN Siswa</label>
+          <input type="text" id="catatanSiswaSearchInput" oninput="filterCatatanStudentList()" placeholder="Ketik nama siswa..." class="w-full p-2.5 border rounded-lg">
+          <div id="catatanStudentSuggestions" class="absolute z-15 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 overflow-y-auto hidden mt-1"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block font-semibold mb-1">Kelas</label><input type="text" id="catatanKelas" readonly class="w-full p-2.5 border rounded-lg bg-slate-100"></div>
+          <div><label class="block font-semibold mb-1">NISN</label><input type="text" id="catatanNisn" readonly class="w-full p-2.5 border rounded-lg bg-slate-100"></div>
+        </div>
+        <input type="hidden" id="catatanNamaSiswa">
+        <input type="hidden" id="catatanNipd">
+        <div>
+          <label class="block font-semibold mb-1">Jenis Pelanggaran</label>
+          <select id="catatanJenisSelect" onchange="onCatatanJenisSelect()" required class="w-full p-2.5 border rounded-lg"><option value="">-- Pilih Jenis --</option></select>
+        </div>
+        <div><label class="block font-semibold mb-1">Kategori (Otomatis)</label><input type="text" id="catatanKategori" readonly class="w-full p-2.5 border rounded-lg bg-slate-100"></div>
+        <div><label class="block font-semibold mb-1">Poin (Otomatis)</label><input type="number" id="catatanPoin" readonly class="w-full p-2.5 border rounded-lg bg-slate-100"></div>
+        <div><label class="block font-semibold mb-1">Tindak Lanjut / Sanksi</label><input type="text" id="catatanTindak" required class="w-full p-2.5 border rounded-lg" placeholder="Contoh: Pembinaan Wali Kelas"></div>
+        <div>
+          <label class="block font-semibold mb-1">Guru Pendamping</label>
+          <select id="catatanGuruSelect" required class="w-full p-2.5 border rounded-lg"><option value="">-- Pilih Guru --</option></select>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Keterangan Status</label>
+          <select id="catatanKeterangan" class="w-full p-2.5 border rounded-lg"><option value="Proses">Proses</option><option value="Selesai">Selesai</option><option value="Belum ditindak">Belum ditindak</option></select>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeCatatanModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow">Simpan Catatan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL FORM KONSELING -->
+  <div id="konselingModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="konselingModalTitle" class="text-base font-bold text-slate-800">Tambah Data Konseling</h3>
+        <button onclick="closeKonselingModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <form id="konselingForm" onsubmit="handleKonselingFormSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="konselingRowId">
+        <div><label class="block font-semibold mb-1">Hari & Tanggal</label><input type="date" id="konselingTanggal" required class="w-full p-2.5 border rounded-lg"></div>
+        
+        <div class="relative">
+          <label class="block font-semibold mb-1">Cari Nama / NISN Siswa</label>
+          <input type="text" id="konselingSiswaSearchInput" oninput="filterKonselingStudentList()" placeholder="Ketik nama siswa..." class="w-full p-2.5 border rounded-lg">
+          <div id="konselingStudentSuggestions" class="absolute z-15 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 overflow-y-auto hidden mt-1"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block font-semibold mb-1">Kelas (Otomatis)</label><input type="text" id="konselingKelas" readonly class="w-full p-2.5 border rounded-lg bg-slate-100"></div>
+          <div><label class="block font-semibold mb-1">NISN (Otomatis)</label><input type="text" id="konselingNisn" readonly class="w-full p-2.5 border rounded-lg bg-slate-100"></div>
+        </div>
+        <input type="hidden" id="konselingNamaSiswa">
+        <input type="hidden" id="konselingNipd">
+        
+        <div><label class="block font-semibold mb-1">Permasalahan</label><textarea id="konselingPermasalahan" rows="2" required class="w-full p-2.5 border rounded-lg"></textarea></div>
+        <div>
+          <label class="block font-semibold mb-1">Jenis Layanan</label>
+          <select id="konselingJenis" required class="w-full p-2.5 border rounded-lg">
+            <option value="Individu">Individu</option>
+            <option value="Sosial">Sosial</option>
+            <option value="Belajar">Belajar</option>
+            <option value="Karir">Karir</option>
+          </select>
+        </div>
+        <div><label class="block font-semibold mb-1">Rencana Tindak Lanjut</label><input type="text" id="konselingTindak" required class="w-full p-2.5 border rounded-lg"></div>
+        <div>
+          <label class="block font-semibold mb-1">Keterangan / Status</label>
+          <select id="konselingKeterangan" required class="w-full p-2.5 border rounded-lg">
+            <option value="Tuntas">Tuntas</option>
+            <option value="Proses">Proses</option>
+            <option value="Perlu Home Visit">Perlu Home Visit</option>
+            <option value="Dikembalikan ke Wali Kelas">Dikembalikan ke Wali Kelas</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Guru Pendamping</label>
+          <select id="konselingGuruSelect" required class="w-full p-2.5 border rounded-lg"><option value="">-- Pilih Guru --</option></select>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Upload Bukti Layanan / Dokumen (Drive - Opsional)</label>
+          <input type="file" id="konselingBuktiFile" accept="image/*,.pdf" class="w-full p-2 border rounded-lg text-xs">
+          <input type="hidden" id="konselingBuktiUrl">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeKonselingModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL PREVIEW & CETAK KARTU DIGITAL (PELAJAR & GURU) -->
+  <div id="idCardModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl max-h-[95vh] overflow-y-auto space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <div>
+          <h3 id="idCardModalTitle" class="text-base font-bold text-slate-800">Cetak Kartu Digital</h3>
+          <p class="text-xs text-slate-500">Pratinjau kartu resmi SD Negeri Pilangrejo 1 dengan QR Presensi.</p>
+        </div>
+        <button onclick="closeIdCardModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+      </div>
+
+      <!-- Filter Pilihan saat Cetak Massal -->
+      <div id="idCardBulkControls" class="hidden bg-slate-50 p-3 rounded-xl border flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <label class="text-xs font-bold text-slate-700">Filter Rombel:</label>
+          <select id="bulkCardClassFilter" onchange="renderBulkStudentCardsPreview()" class="text-xs p-1.5 border rounded-lg bg-white font-medium">
+            <option value="">Semua Siswa</option>
+          </select>
+        </div>
+        <span id="bulkCardCountBadge" class="text-xs bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded-full">0 Kartu</span>
+      </div>
+
+      <!-- Container Pratinjau Kartu -->
+      <div class="flex justify-center p-4 bg-slate-100/80 rounded-2xl border min-h-[350px]">
+        <div id="idCardPreviewContainer" class="flex flex-wrap justify-center gap-6"></div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex justify-between items-center pt-2">
+        <span class="text-[11px] text-slate-400"><i class="fa-solid fa-print mr-1"></i> Format cetak otomatis disesuaikan di lembar kertas A4.</span>
+        <div class="flex gap-2">
+          <button type="button" onclick="closeIdCardModal()" class="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600">Tutup</button>
+          <button type="button" onclick="printRenderedCards()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow flex items-center gap-2">
+            <i class="fa-solid fa-print"></i> Cetak Kartu Sekarang
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL UPLOAD FOTO SISWA MASAL MELALUI .ZIP -->
+  <div id="zipUploadModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <div>
+          <h3 class="text-base font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-file-zipper text-purple-600"></i> Upload Foto Siswa Massal (.Zip)</h3>
+          <p class="text-xs text-slate-500">Nama file foto harus sesuai dengan NISN siswa (misal: <code>0098765432.jpg</code> atau <code>.png</code>).</p>
+        </div>
+        <button onclick="closeZipUploadModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+      </div>
+
+      <div class="space-y-3">
+        <div class="border-2 border-dashed border-purple-300 rounded-2xl p-6 text-center hover:bg-purple-50/50 transition cursor-pointer" onclick="document.getElementById('zipFileInput').click()">
+          <i class="fa-solid fa-cloud-arrow-up text-3xl text-purple-500 mb-2"></i>
+          <p class="text-xs font-bold text-slate-700">Klik di sini untuk memilih file .ZIP dari komputer</p>
+          <p class="text-[11px] text-slate-400 mt-1">Mendukung arsip zip berisi puluhan/ratusan file JPG atau PNG.</p>
+          <input type="file" id="zipFileInput" accept=".zip" class="hidden" onchange="handleZipFileSelected(event)">
+        </div>
+
+        <!-- Selected File Status & Unzip Progress -->
+        <div id="zipSelectedInfo" class="hidden bg-slate-50 p-3 rounded-xl border text-xs space-y-2">
+          <div class="flex justify-between font-bold text-slate-700">
+            <span id="zipFileName">-</span>
+            <span id="zipFileSize" class="text-slate-400">-</span>
+          </div>
+          <div id="zipProgressBarContainer" class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden hidden">
+            <div id="zipProgressBar" class="bg-purple-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <p id="zipStatusText" class="text-[11px] text-purple-600 font-semibold"></p>
+        </div>
+
+        <!-- Preview Mapping Hasil Ekstraksi -->
+        <div id="zipMatchReport" class="hidden max-h-48 overflow-y-auto border rounded-xl p-2 bg-slate-50 text-[11px] space-y-1"></div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeZipUploadModal()" class="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600">Batal</button>
+        <button type="button" id="btnStartZipUpload" onclick="startZipUploadProcess()" disabled class="px-5 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold shadow flex items-center gap-1.5">
+          <i class="fa-solid fa-upload"></i> Proses & Upload ke Drive
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL MANUAL PRESENSI SISWA -->
+  <div id="manualPresensiSiswaModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="manualPresensiSiswaTitle" class="text-base font-bold text-slate-800">Input Manual Presensi Siswa</h3>
+        <button onclick="closeManualPresensiSiswaModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+      </div>
+      <form onsubmit="handleManualPresensiSiswaSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="manualSiswaRowId">
+        <div>
+          <label class="block font-semibold mb-1">Tanggal Presensi</label>
+          <input type="date" id="manualSiswaTanggal" required class="w-full p-2.5 border rounded-lg">
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Jam Presensi</label>
+          <input type="time" id="manualSiswaJam" required class="w-full p-2.5 border rounded-lg">
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Pilih Siswa</label>
+          <select id="manualSiswaSelect" required class="w-full p-2.5 border rounded-lg">
+            <option value="">-- Pilih Siswa --</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Status Kehadiran</label>
+          <select id="manualSiswaStatus" required class="w-full p-2.5 border rounded-lg">
+            <option value="Hadir">Hadir</option>
+            <option value="Sakit">Sakit</option>
+            <option value="Izin">Izin</option>
+            <option value="Alpa">Alpa</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Keterangan Tambahan</label>
+          <input type="text" id="manualSiswaKeterangan" placeholder="Contoh: Izin acara keluarga / Sakit flu" class="w-full p-2.5 border rounded-lg">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeManualPresensiSiswaModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow">Simpan Presensi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL MANUAL PRESENSI GURU -->
+  <div id="manualPresensiGuruModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="manualPresensiGuruTitle" class="text-base font-bold text-slate-800">Input Manual Presensi Guru</h3>
+        <button onclick="closeManualPresensiGuruModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+      </div>
+      <form onsubmit="handleManualPresensiGuruSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="manualGuruRowId">
+        <div>
+          <label class="block font-semibold mb-1">Tanggal Presensi</label>
+          <input type="date" id="manualGuruTanggal" required class="w-full p-2.5 border rounded-lg">
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Jam Presensi</label>
+          <input type="time" id="manualGuruJam" required class="w-full p-2.5 border rounded-lg">
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Pilih Guru / Staf</label>
+          <select id="manualGuruSelect" required class="w-full p-2.5 border rounded-lg">
+            <option value="">-- Pilih Guru --</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Status Kehadiran</label>
+          <select id="manualGuruStatus" required class="w-full p-2.5 border rounded-lg">
+            <option value="Hadir">Hadir</option>
+            <option value="Sakit">Sakit</option>
+            <option value="Izin">Izin</option>
+            <option value="Alpa">Alpa</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Keterangan Tambahan</label>
+          <input type="text" id="manualGuruKeterangan" placeholder="Contoh: Dinas Luar / KKG" class="w-full p-2.5 border rounded-lg">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeManualPresensiGuruModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-teal-600 text-white rounded-xl font-medium shadow">Simpan Presensi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CONTAINER KHUSUS UNTUK CETAK KARTU DIGITAL KE KERTAS A4 (@media print) -->
+  <div id="printSection" class="hidden">
+    <div id="printCardsGrid" class="print-grid"></div>
+  </div>
+
+  <!-- Scripts: Configuration & Core Engine -->
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
