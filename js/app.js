@@ -201,7 +201,7 @@ async function loadDataSWR(forceRefresh = false) {
   // Jika cache kadaluarsa (> TTL) atau dipaksa refresh, ambil dari server
   if (forceRefresh || (now - cachedTime > CONFIG.CACHE_TTL_MS) || !cachedBoot) {
     showSyncIndicator(true);
-    const res = await apiGet('getBootData');
+    const res = await apiGet('getBootData', forceRefresh ? { _t: Date.now() } : {});
     showSyncIndicator(false);
 
     if (res && res.success && res.data) {
@@ -209,8 +209,30 @@ async function loadDataSWR(forceRefresh = false) {
       localStorage.setItem('spilsa_cached_time', String(now));
       applyPayloadToState(res.data);
       renderAllViews();
+      const currentSub = localStorage.getItem('spilsa_active_subtab');
+      if (currentSub && currentActiveRole === 'admin') {
+        renderCurrentSubView_(currentSub);
+      }
     }
   }
+}
+
+function renderCurrentSubView_(sub) {
+  if (sub === 'kelas') renderClassTable();
+  else if (sub === 'siswa') renderAdminTable();
+  else if (sub === 'guru') renderTeacherTable();
+  else if (sub === 'prestasi') renderPrestasiTable();
+  else if (sub === 'catatan') renderCatatanTable();
+  else if (sub === 'jenis') renderJenisTable();
+  else if (sub === 'konseling') renderKonselingTable();
+  else if (sub === 'presensi-siswa') renderPresensiSiswaTable();
+  else if (sub === 'presensi-guru') renderPresensiGuruTable();
+  else if (sub === 'approval-izin') renderApprovalIzinTable();
+  else if (sub === 'users') renderUsersTable();
+  else if (sub === 'pengaturan') loadPengaturanForm();
+  else if (sub === 'wa') loadWAStatusAdmin();
+  else if (sub === 'web') renderStaffTable();
+  else if (sub === 'dashboard') { renderCharts(); handleSearch(); }
 }
 
 function applyPayloadToState(data) {
@@ -430,14 +452,7 @@ function switchAdminSub(sub) {
   }
 
   localStorage.setItem('spilsa_active_subtab', sub);
-
-  if (sub === 'presensi-siswa') renderPresensiSiswaTable();
-  else if (sub === 'presensi-guru') renderPresensiGuruTable();
-  else if (sub === 'approval-izin') renderApprovalIzinTable();
-  else if (sub === 'users') renderUsersTable();
-  else if (sub === 'pengaturan') loadPengaturanForm();
-  else if (sub === 'wa') loadWAStatusAdmin();
-  else if (sub === 'web') renderStaffTable();
+  renderCurrentSubView_(sub);
 }
 
 function switchWebSub(sub) {
@@ -2393,7 +2408,7 @@ async function executeGenericExcelImport_(config) {
     return;
   }
 
-  const origBtnHtml = btn ? btn.innerHTML : '';
+  const origBtnHtml = `<i class="fa-solid fa-cloud-arrow-up"></i> Upload`;
   if (btn) {
     btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Mengimpor...`;
     btn.disabled = true;
@@ -2422,13 +2437,20 @@ async function executeGenericExcelImport_(config) {
         btn.innerHTML = origBtnHtml;
         btn.disabled = false;
       }
-      loadDataSWR(true);
+      await loadDataSWR(true);
     } else {
-      if (btn) { btn.innerHTML = origBtnHtml; btn.disabled = false; }
+      if (btn) {
+        btn.innerHTML = origBtnHtml;
+        btn.disabled = false;
+      }
     }
   } catch (err) {
-    alert(err.message);
-    if (btn) { btn.innerHTML = origBtnHtml; btn.disabled = false; }
+    alert(err.message || 'Terjadi kesalahan saat memproses import file.');
+  } finally {
+    if (btn && btn.disabled) {
+      btn.innerHTML = origBtnHtml;
+      btn.disabled = false;
+    }
   }
 }
 
@@ -3126,33 +3148,6 @@ async function deleteStudent(rowId) {
   }
 }
 
-function handleStudentExcelImport() {
-  const fileInput = document.getElementById('excelStudentFile');
-  const file = fileInput.files[0];
-  if (!file) return;
-
-  const btn = document.getElementById('btnUploadStudent');
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
-  btn.disabled = true;
-
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    const data = new Uint8Array(e.target.result);
-    const workbook = XLSX.read(data, {type: 'array'});
-    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-    const json = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ""});
-    json.shift();
-
-    const res = await apiPost('siswa.importExcel', { rows: json }, currentAdminToken);
-    alert(res.message);
-    fileInput.value = '';
-    btn.classList.add('hidden');
-    btn.disabled = false;
-    if (res.success) loadDataSWR(true);
-  };
-  reader.readAsArrayBuffer(file);
-}
-
 // Teacher Table Logic
 function renderTeacherTable() {
   const tbody = document.getElementById('teacherTableBody');
@@ -3267,31 +3262,6 @@ async function deleteTeacher(rowId) {
   }
 }
 
-function handleTeacherExcelImport() {
-  const fileInput = document.getElementById('excelTeacherFile');
-  const file = fileInput.files[0];
-  if (!file) return;
-
-  const btn = document.getElementById('btnUploadTeacher');
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
-  btn.disabled = true;
-
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    const data = new Uint8Array(e.target.result);
-    const json = XLSX.utils.sheet_to_json(XLSX.read(data, {type: 'array'}).Sheets[XLSX.read(data, {type: 'array'}).SheetNames[0]], {header: 1, defval: ""});
-    json.shift();
-
-    const res = await apiPost('guru.importExcel', { rows: json }, currentAdminToken);
-    alert(res.message);
-    fileInput.value = '';
-    btn.classList.add('hidden');
-    btn.disabled = false;
-    if (res.success) loadDataSWR(true);
-  };
-  reader.readAsArrayBuffer(file);
-}
-
 // Class Table Logic
 function renderClassTable() {
   const tbody = document.getElementById('classTableBody');
@@ -3331,14 +3301,41 @@ async function handleClassFormSubmit(e) {
   e.preventDefault();
   const rowId = document.getElementById('classRowId').value;
   const data = {
-    namaKelas: document.getElementById('inputNamaKelas').value,
-    waliKelas: document.getElementById('inputWaliKelas').value
+    namaKelas: document.getElementById('inputNamaKelas').value.trim(),
+    waliKelas: document.getElementById('inputWaliKelas').value.trim()
   };
+  if (!data.namaKelas) {
+    alert('Nama kelas tidak boleh kosong!');
+    return;
+  }
+  const btn = e.target.querySelector('button[type="submit"]');
+  if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; btn.disabled = true; }
+
   const res = await apiPost('kelas.save', data, currentAdminToken, { rowId: rowId ? parseInt(rowId) : null });
+  if (btn) { btn.innerHTML = 'Simpan Kelas'; btn.disabled = false; }
   alert(res.message);
   if (res.success) {
     closeClassModal();
-    loadDataSWR(true);
+    // Optimistic UI: langsung tampilkan seketika
+    if (rowId) {
+      const idx = appState.classes.findIndex(c => c.rowId == rowId);
+      if (idx !== -1) {
+        appState.classes[idx].namaKelas = data.namaKelas;
+        appState.classes[idx].waliKelas = data.waliKelas;
+      }
+    } else {
+      appState.classes.push({
+        rowId: Date.now(),
+        namaKelas: data.namaKelas,
+        jumlahSiswa: 0,
+        waliKelas: data.waliKelas
+      });
+    }
+    renderClassTable();
+    populateDropdowns();
+    await loadDataSWR(true);
+    renderClassTable();
+    populateDropdowns();
   }
 }
 
@@ -3346,7 +3343,14 @@ async function deleteClass(rowId) {
   if (confirm('Hapus kelas ini?')) {
     const res = await apiPost('kelas.delete', {}, currentAdminToken, { rowId: rowId });
     alert(res.message);
-    if (res.success) loadDataSWR(true);
+    if (res.success) {
+      appState.classes = appState.classes.filter(c => c.rowId != rowId);
+      renderClassTable();
+      populateDropdowns();
+      await loadDataSWR(true);
+      renderClassTable();
+      populateDropdowns();
+    }
   }
 }
 
