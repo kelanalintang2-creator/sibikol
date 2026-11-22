@@ -258,6 +258,44 @@ body {
   background: rgba(255, 255, 255, 0.45);
 }
 
+/* ==================================================== */
+/* SOLID SIDEBAR LAYOUT (DESKTOP, TABLET & MOBILE)      */
+/* ==================================================== */
+@media (min-width: 768px) {
+  #adminSidebar {
+    position: sticky !important;
+    top: 5rem !important;
+    transform: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: flex !important;
+    max-height: calc(100vh - 6rem) !important;
+  }
+  #adminSidebarBackdrop {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  #adminSidebar {
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    width: 18rem !important;
+    z-index: 9999 !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    border-radius: 0 1.5rem 1.5rem 0 !important;
+  }
+  #adminSidebar.mobile-open {
+    transform: translateX(0) !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+  }
+}
+
 /* Sidebar Collapsed / Minimized Mode (Desktop) */
 #adminSidebar.is-collapsed {
   width: 5rem !important; /* 80px */

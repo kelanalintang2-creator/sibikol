@@ -347,14 +347,21 @@ function toggleMobileSidebar(forceState) {
   const backdrop = document.getElementById('adminSidebarBackdrop');
   if (!sidebar) return;
 
-  const isOpen = !sidebar.classList.contains('-translate-x-full');
+  // Di desktop / tablet (>= 768px), sidebar selalu tampil di layout
+  if (window.innerWidth >= 768) {
+    sidebar.classList.remove('mobile-open');
+    if (backdrop) backdrop.classList.add('hidden');
+    return;
+  }
+
+  const isOpen = sidebar.classList.contains('mobile-open');
   const newState = (forceState !== undefined) ? forceState : !isOpen;
 
   if (newState) {
-    sidebar.classList.remove('-translate-x-full');
+    sidebar.classList.add('mobile-open');
     if (backdrop) backdrop.classList.remove('hidden');
   } else {
-    sidebar.classList.add('-translate-x-full');
+    sidebar.classList.remove('mobile-open');
     if (backdrop) backdrop.classList.add('hidden');
   }
 }
@@ -376,7 +383,9 @@ function toggleSidebarGroup(groupName) {
 
 function switchAdminSub(sub) {
   stopAllCameraStreams();
-  toggleMobileSidebar(false); // Tutup drawer mobile secara otomatis
+  if (window.innerWidth < 768) {
+    toggleMobileSidebar(false); // Tutup drawer mobile hanya di layar HP
+  }
 
   const allSubmenus = [
     'dashboard', 'presensi-siswa', 'presensi-guru', 'approval-izin', 
