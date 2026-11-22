@@ -19,10 +19,16 @@ let appState = {
   webCMS: [],
   galeri: [],
   presensiSiswa: [],
-  presensiGuru: []
+  presensiGuru: [],
+  pengaturan: {},
+  pengajuanIzin: [],
+  rekamWajah: [],
+  users: []
 };
 
+let currentActiveRole = null; // 'admin' | 'guru' | 'siswa' | null
 let currentStudentSession = null;
+let currentGuruSession = null;
 let currentAdminToken = null;
 let currentFilter = 'all';
 let currentWebSubTab = 'berita';
@@ -33,8 +39,11 @@ let html5QrScannerGuru = null;
 let videoStreamSiswa = null;
 let videoStreamGuru = null;
 let videoStreamSelfie = null;
+let videoStreamRekam = null;
 let studentGeoWatcher = null;
 let studentCurrentDistance = null;
+let guruGeoWatcher = null;
+let guruCurrentDistance = null;
 let selectedZipPhotos = [];
 
 // PWA deferred install prompt
@@ -56,22 +65,42 @@ window.addEventListener('DOMContentLoaded', () => {
   checkStoredSessions();
   loadDataSWR();
   initQuillEditors();
+  initScrollAnimations();
 });
 
 function checkStoredSessions() {
+  currentActiveRole = localStorage.getItem('spilsa_active_role') || null;
   currentAdminToken = localStorage.getItem('spilsa_admin_token') || null;
-  if (currentAdminToken) {
-    const lockIcon = document.getElementById('adminIconLock');
-    if (lockIcon) lockIcon.className = "fa-solid fa-lock-open text-emerald-300";
+
+  const savedGuru = localStorage.getItem('spilsa_guru_session');
+  if (savedGuru) {
+    try { currentGuruSession = JSON.parse(savedGuru); } catch(e) { currentGuruSession = null; }
   }
 
   const savedStudent = localStorage.getItem('spilsa_student_session');
   if (savedStudent) {
-    try {
-      currentStudentSession = JSON.parse(savedStudent);
-    } catch(e) {
-      currentStudentSession = null;
-    }
+    try { currentStudentSession = JSON.parse(savedStudent); } catch(e) { currentStudentSession = null; }
+  }
+
+  // Restore Theme Preset
+  const savedTheme = localStorage.getItem('spilsa_theme_preset') || 'indigo';
+  applyThemePreset(savedTheme, false);
+
+  updateHeaderAuthUI();
+
+  // Restore active view without being forced to login (POIN 13)
+  const savedTab = localStorage.getItem('spilsa_active_tab') || 'dashboard';
+  const savedSub = localStorage.getItem('spilsa_active_subtab') || 'dashboard';
+
+  if (currentActiveRole === 'admin' && currentAdminToken) {
+    switchTab('admin');
+    if (savedSub) switchAdminSub(savedSub);
+  } else if (currentActiveRole === 'guru' && currentGuruSession) {
+    switchTab('guru');
+  } else if (currentActiveRole === 'siswa' && currentStudentSession) {
+    switchTab('siswa');
+  } else {
+    switchTab('dashboard');
   }
 }
 
@@ -189,6 +218,10 @@ function applyPayloadToState(data) {
   appState.galeri = data.galeri || appState.galeri;
   appState.presensiSiswa = data.presensiSiswa || appState.presensiSiswa;
   appState.presensiGuru = data.presensiGuru || appState.presensiGuru;
+  appState.pengaturan = data.pengaturan || appState.pengaturan;
+  appState.pengajuanIzin = data.pengajuanIzin || appState.pengajuanIzin;
+  appState.rekamWajah = data.rekamWajah || appState.rekamWajah;
+  appState.users = data.users || appState.users;
 }
 
 function showSyncIndicator(isLoading) {
@@ -212,12 +245,19 @@ function renderAllViews() {
   renderKonselingTable();
   renderPresensiSiswaTable();
   renderPresensiGuruTable();
+  renderApprovalIzinTable();
+  renderUsersTable();
+  loadPengaturanForm();
   populateDropdowns();
   renderCharts();
   handleSearch();
+  initScrollAnimations();
 
   if (currentStudentSession) {
     renderStudentPortalView();
+  }
+  if (currentGuruSession) {
+    renderGuruDashboard();
   }
 }
 
@@ -226,57 +266,79 @@ function renderAllViews() {
 // ============================================
 function switchTab(tab) {
   stopAllCameraStreams();
+  stopGuruCameraAndGeo();
+
   const tabDash = document.getElementById('tab-dashboard');
   const tabAdm = document.getElementById('tab-admin');
   const tabSis = document.getElementById('tab-siswa');
+  const tabGur = document.getElementById('tab-guru');
   const navDash = document.getElementById('nav-dashboard');
-  const navAdm = document.getElementById('nav-admin');
-  const navSis = document.getElementById('nav-siswa');
 
-  tabDash.classList.add('hidden');
-  tabAdm.classList.add('hidden');
+  if (tabDash) tabDash.classList.add('hidden');
+  if (tabAdm) tabAdm.classList.add('hidden');
   if (tabSis) tabSis.classList.add('hidden');
+  if (tabGur) tabGur.classList.add('hidden');
 
-  navDash.className = "px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white hover:bg-indigo-800 transition flex items-center gap-2";
-  navAdm.className = "px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white hover:bg-indigo-800 transition flex items-center gap-2";
-  if (navSis) navSis.className = "px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white hover:bg-indigo-800 transition flex items-center gap-2";
+  if (navDash) navDash.className = "px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white hover:bg-white/10 transition flex items-center gap-2";
+
+  localStorage.setItem('spilsa_active_tab', tab);
 
   if (tab === 'dashboard') {
-    tabDash.classList.remove('hidden');
-    navDash.className = "px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-indigo-700 shadow transition flex items-center gap-2";
+    if (tabDash) tabDash.classList.remove('hidden');
+    if (navDash) navDash.className = "px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-indigo-700 shadow transition flex items-center gap-2";
     renderPublicPortal();
-  } else if (tab === 'siswa') {
-    if (tabSis) tabSis.classList.remove('hidden');
-    if (navSis) navSis.className = "px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-indigo-700 shadow transition flex items-center gap-2";
-    renderStudentPortalView();
-  } else {
-    if (!currentAdminToken) {
-      openLoginModal();
+  } else if (tab === 'guru') {
+    if (!currentGuruSession) {
+      openLoginModal('guru');
       return;
     }
-    tabAdm.classList.remove('hidden');
-    navAdm.className = "px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-indigo-700 shadow transition flex items-center gap-2";
+    if (tabGur) tabGur.classList.remove('hidden');
+    renderGuruDashboard();
+  } else if (tab === 'siswa') {
+    if (!currentStudentSession) {
+      openLoginModal('siswa');
+      return;
+    }
+    if (tabSis) tabSis.classList.remove('hidden');
+    renderStudentPortalView();
+  } else if (tab === 'admin') {
+    if (!currentAdminToken) {
+      openLoginModal('admin');
+      return;
+    }
+    if (tabAdm) tabAdm.classList.remove('hidden');
+    const savedSub = localStorage.getItem('spilsa_active_subtab') || 'dashboard';
+    switchAdminSub(savedSub);
   }
 }
 
 function switchAdminSub(sub) {
   stopAllCameraStreams();
-  const allSubmenus = ['dashboard', 'presensi-siswa', 'presensi-guru', 'web', 'siswa', 'guru', 'kelas', 'prestasi', 'konseling', 'catatan', 'jenis', 'wa', 'migrasi', 'password'];
+  const allSubmenus = [
+    'dashboard', 'presensi-siswa', 'presensi-guru', 'approval-izin', 
+    'web', 'siswa', 'guru', 'kelas', 'prestasi', 'konseling', 
+    'catatan', 'jenis', 'users', 'pengaturan', 'wa', 'migrasi'
+  ];
   
   allSubmenus.forEach(s => {
     const el = document.getElementById('admin-sub-' + s);
     if (el) el.classList.add('hidden');
     const btn = document.getElementById('subnav-' + s);
-    if (btn) btn.className = "px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0";
+    if (btn) btn.className = "w-full text-left px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5";
   });
 
   const activeEl = document.getElementById('admin-sub-' + sub);
   if (activeEl) activeEl.classList.remove('hidden');
   const activeBtn = document.getElementById('subnav-' + sub);
-  if (activeBtn) activeBtn.className = "px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white transition flex items-center gap-2 shrink-0";
+  if (activeBtn) activeBtn.className = "w-full text-left px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold bg-indigo-600 text-white shadow transition flex items-center gap-2.5";
+
+  localStorage.setItem('spilsa_active_subtab', sub);
 
   if (sub === 'presensi-siswa') renderPresensiSiswaTable();
   else if (sub === 'presensi-guru') renderPresensiGuruTable();
+  else if (sub === 'approval-izin') renderApprovalIzinTable();
+  else if (sub === 'users') renderUsersTable();
+  else if (sub === 'pengaturan') loadPengaturanForm();
   else if (sub === 'wa') loadWAStatusAdmin();
 }
 
@@ -310,91 +372,246 @@ function switchWebSub(sub) {
 }
 
 // ============================================
-// 5. AUTENTIKASI ADMIN & SISWA
+// 5. AUTENTIKASI MULTI-USER (POIN 11 & 13)
 // ============================================
-function handleAdminMenuClick() {
-  if (currentAdminToken) {
-    switchTab('admin');
-  } else {
-    openLoginModal();
+function openLoginModal(defaultRole = 'admin') {
+  setLoginRole(defaultRole);
+  const modal = document.getElementById('modalUnifiedLogin');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
   }
-}
-
-function openLoginModal() {
-  document.getElementById('adminPasswordInput').value = '';
-  document.getElementById('loginErrorMsg').classList.add('hidden');
-  document.getElementById('loginModal').classList.remove('hidden');
-  document.getElementById('loginModal').classList.add('flex');
 }
 
 function closeLoginModal() {
-  document.getElementById('loginModal').classList.remove('flex');
-  document.getElementById('loginModal').classList.add('hidden');
+  const modal = document.getElementById('modalUnifiedLogin');
+  if (modal) {
+    modal.classList.remove('flex');
+    modal.classList.add('hidden');
+  }
 }
 
-async function handleAdminLogin(e) {
+function setLoginRole(role) {
+  const roleInput = document.getElementById('loginRole');
+  if (roleInput) roleInput.value = role;
+
+  ['admin', 'guru', 'siswa'].forEach(r => {
+    const btn = document.getElementById(`loginRoleBtn-${r}`);
+    if (btn) {
+      if (r === role) {
+        btn.className = "py-2 rounded-xl transition bg-indigo-600 text-white shadow-sm flex items-center justify-center gap-1.5";
+      } else {
+        btn.className = "py-2 rounded-xl transition text-slate-600 hover:text-slate-800 flex items-center justify-center gap-1.5";
+      }
+    }
+  });
+
+  const label = document.getElementById('loginUsernameLabel');
+  const icon = document.getElementById('loginUsernameIcon');
+  const tip = document.getElementById('loginTipText');
+  const input = document.getElementById('loginUsername');
+
+  if (role === 'admin') {
+    if (label) label.innerText = 'Username / ID Admin';
+    if (icon) icon.className = 'fa-solid fa-user-shield';
+    if (input) input.placeholder = 'admin';
+    if (tip) tip.innerHTML = '<i class="fa-solid fa-circle-info mr-1 text-indigo-500"></i> Masukkan username dan kata sandi Administrator.';
+  } else if (role === 'guru') {
+    if (label) label.innerText = 'NIP / Nama Guru';
+    if (icon) icon.className = 'fa-solid fa-chalkboard-user';
+    if (input) input.placeholder = 'Masukkan NIP atau nama guru...';
+    if (tip) tip.innerHTML = '<i class="fa-solid fa-circle-info mr-1 text-teal-600"></i> Untuk Guru, gunakan NIP sebagai Username dan Password default.';
+  } else if (role === 'siswa') {
+    if (label) label.innerText = 'NISN Siswa';
+    if (icon) icon.className = 'fa-solid fa-graduation-cap';
+    if (input) input.placeholder = 'Masukkan NISN siswa (10 digit)...';
+    if (tip) tip.innerHTML = '<i class="fa-solid fa-circle-info mr-1 text-purple-600"></i> Untuk Siswa, gunakan 10 digit NISN sebagai Username dan Password default.';
+  }
+}
+
+function togglePasswordVisibility(inputId, iconId) {
+  const inp = document.getElementById(inputId);
+  const ico = document.getElementById(iconId);
+  if (!inp || !ico) return;
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    ico.className = 'fa-solid fa-eye-slash text-xs';
+  } else {
+    inp.type = 'password';
+    ico.className = 'fa-solid fa-eye text-xs';
+  }
+}
+
+async function handleUnifiedLogin(e) {
   e.preventDefault();
-  const pass = document.getElementById('adminPasswordInput').value;
-  const btn = e.target.querySelector('button[type="submit"]');
-  btn.innerText = 'Memeriksa...';
+  const role = document.getElementById('loginRole').value;
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+  const btn = document.getElementById('btnSubmitUnifiedLogin');
+
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memverifikasi...';
   btn.disabled = true;
 
-  const res = await apiPost('auth.adminLogin', { password: pass });
-  btn.innerText = 'Masuk Administrator';
+  const res = await apiPost('auth.unifiedLogin', { username, password, role });
+  btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Masuk Sekarang';
   btn.disabled = false;
 
-  if (res.success && res.token) {
-    currentAdminToken = res.token;
-    localStorage.setItem('spilsa_admin_token', res.token);
-    document.getElementById('adminIconLock').className = "fa-solid fa-lock-open text-emerald-300";
+  if (res.success) {
     closeLoginModal();
-    switchTab('admin');
+    currentActiveRole = role;
+    localStorage.setItem('spilsa_active_role', role);
+
+    if (role === 'admin') {
+      currentAdminToken = res.token || 'spilsa-token-admin';
+      localStorage.setItem('spilsa_admin_token', currentAdminToken);
+      updateHeaderAuthUI();
+      switchTab('admin');
+    } else if (role === 'guru') {
+      currentGuruSession = res.user;
+      localStorage.setItem('spilsa_guru_session', JSON.stringify(res.user));
+      updateHeaderAuthUI();
+      switchTab('guru');
+      renderGuruDashboard();
+    } else if (role === 'siswa') {
+      currentStudentSession = res.user;
+      localStorage.setItem('spilsa_student_session', JSON.stringify(res.user));
+      updateHeaderAuthUI();
+      switchTab('siswa');
+      renderStudentPortalView();
+    }
   } else {
-    const errEl = document.getElementById('loginErrorMsg');
-    errEl.innerText = res.message || 'Login gagal';
-    errEl.classList.remove('hidden');
+    alert('Login Gagal: ' + res.message);
   }
 }
 
-function adminLogout() {
-  currentAdminToken = null;
-  localStorage.removeItem('spilsa_admin_token');
-  document.getElementById('adminIconLock').className = "fa-solid fa-lock";
-  switchTab('dashboard');
-  alert('Sesi Administrator telah diakhiri.');
+function updateHeaderAuthUI() {
+  const badge = document.getElementById('navUserBadge');
+  const loginBtn = document.getElementById('nav-login-btn') || document.getElementById('btnNavLogin');
+  const userText = document.getElementById('navUserDisplayName') || document.getElementById('navUserBadgeText');
+
+  if (currentActiveRole === 'admin' && currentAdminToken) {
+    if (loginBtn) loginBtn.classList.add('hidden');
+    if (badge) badge.classList.remove('hidden');
+    if (userText) userText.innerText = "Admin Portal";
+  } else if (currentActiveRole === 'guru' && currentGuruSession) {
+    if (loginBtn) loginBtn.classList.add('hidden');
+    if (badge) badge.classList.remove('hidden');
+    if (userText) userText.innerText = currentGuruSession.namaGuru || currentGuruSession.nama || "Dewan Guru";
+  } else if (currentActiveRole === 'siswa' && currentStudentSession) {
+    if (loginBtn) loginBtn.classList.add('hidden');
+    if (badge) badge.classList.remove('hidden');
+    if (userText) userText.innerText = currentStudentSession.nama || "Siswa";
+  } else {
+    if (badge) badge.classList.add('hidden');
+    if (loginBtn) loginBtn.classList.remove('hidden');
+  }
 }
 
-async function handlePasswordUpdate(e) {
-  e.preventDefault();
-  const oldPass = document.getElementById('oldPassword').value;
-  const newPass = document.getElementById('newPassword').value;
-  const confirmPass = document.getElementById('confirmPassword').value;
-  const errorMsg = document.getElementById('passwordErrorMsg');
+function goToUserDashboard() {
+  if (currentActiveRole === 'admin') switchTab('admin');
+  else if (currentActiveRole === 'guru') switchTab('guru');
+  else if (currentActiveRole === 'siswa') switchTab('siswa');
+  else switchTab('dashboard');
+}
 
-  if (newPass !== confirmPass) {
-    errorMsg.innerText = 'Konfirmasi password baru tidak cocok!';
-    errorMsg.classList.remove('hidden');
+function handleUserBadgeClick() {
+  goToUserDashboard();
+}
+
+function logoutAll() {
+  if (confirm('Keluar dari sesi akun Anda?')) {
+    currentActiveRole = null;
+    currentAdminToken = null;
+    currentGuruSession = null;
+    currentStudentSession = null;
+    localStorage.removeItem('spilsa_active_role');
+    localStorage.removeItem('spilsa_admin_token');
+    localStorage.removeItem('spilsa_guru_session');
+    localStorage.removeItem('spilsa_student_session');
+    localStorage.removeItem('spilsa_active_tab');
+    localStorage.removeItem('spilsa_active_subtab');
+    updateHeaderAuthUI();
+    switchTab('dashboard');
+  }
+}
+
+// ============================================
+// THEME GRADIENT & ANIMASI SCROLL (POIN 9 & 14)
+// ============================================
+const THEME_PRESETS = {
+  emerald: {
+    header: 'bg-gradient-to-r from-emerald-800 via-teal-900 to-slate-900',
+    sidebar: 'bg-gradient-to-b from-slate-900 via-emerald-950 to-slate-950',
+    footer: 'bg-slate-900',
+    accent: 'emerald'
+  },
+  indigo: {
+    header: 'bg-gradient-to-r from-indigo-900 via-blue-900 to-slate-900',
+    sidebar: 'bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-950',
+    footer: 'bg-slate-900',
+    accent: 'indigo'
+  },
+  purple: {
+    header: 'bg-gradient-to-r from-purple-900 via-fuchsia-950 to-slate-900',
+    sidebar: 'bg-gradient-to-b from-slate-900 via-purple-950 to-slate-950',
+    footer: 'bg-slate-900',
+    accent: 'purple'
+  },
+  amber: {
+    header: 'bg-gradient-to-r from-amber-800 via-orange-900 to-slate-900',
+    sidebar: 'bg-gradient-to-b from-slate-900 via-amber-950 to-slate-950',
+    footer: 'bg-slate-900',
+    accent: 'amber'
+  },
+  midnight: {
+    header: 'bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950',
+    sidebar: 'bg-gradient-to-b from-slate-950 via-slate-900 to-black',
+    footer: 'bg-black',
+    accent: 'slate'
+  }
+};
+
+function applyThemePreset(presetKey, save = true) {
+  const preset = THEME_PRESETS[presetKey] || THEME_PRESETS.indigo;
+  const header = document.querySelector('header');
+  const sidebar = document.getElementById('adminSidebar');
+  const footer = document.querySelector('footer');
+
+  if (header) {
+    header.className = `text-white shadow-xl sticky top-0 z-40 transition-colors duration-500 ${preset.header}`;
+  }
+  if (sidebar) {
+    sidebar.className = `w-full lg:w-64 shrink-0 rounded-3xl shadow-xl overflow-hidden text-white p-4 space-y-4 border border-white/10 sticky top-20 transition-colors duration-500 ${preset.sidebar}`;
+  }
+  if (footer) {
+    footer.className = `text-white mt-12 py-8 border-t border-slate-800 transition-colors duration-500 ${preset.footer}`;
+  }
+  if (save) {
+    localStorage.setItem('spilsa_theme_preset', presetKey);
+  }
+  const select = document.getElementById('settingThemePreset');
+  if (select) select.value = presetKey;
+}
+
+function initScrollAnimations() {
+  const animatedElements = document.querySelectorAll('.reveal-on-scroll, .reveal-left, .reveal-right, .reveal-zoom');
+  if (!animatedElements.length) return;
+  if (!('IntersectionObserver' in window)) {
+    animatedElements.forEach(el => el.classList.add('is-revealed'));
     return;
   }
-  errorMsg.classList.add('hidden');
-
-  const btn = document.getElementById('btnUpdatePassword');
-  btn.innerText = 'Menyimpan...'; btn.disabled = true;
-
-  const res = await apiPost('auth.updatePassword', { oldPassword: oldPass, newPassword: newPass }, currentAdminToken);
-  btn.innerText = 'Simpan Password Baru'; btn.disabled = false;
-
-  if (res.success && res.token) {
-    currentAdminToken = res.token;
-    localStorage.setItem('spilsa_admin_token', res.token);
-    alert(res.message);
-    document.getElementById('oldPassword').value = '';
-    document.getElementById('newPassword').value = '';
-    document.getElementById('confirmPassword').value = '';
-  } else {
-    errorMsg.innerText = res.message || 'Gagal mengubah password';
-    errorMsg.classList.remove('hidden');
-  }
+  const observer = new IntersectionObserver((entries, obs) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-revealed');
+        obs.unobserve(entry.target);
+      }
+    });
+  }, {
+    threshold: 0.15,
+    rootMargin: '0px 0px -40px 0px'
+  });
+  animatedElements.forEach(el => observer.observe(el));
 }
 
 // ============================================
@@ -461,7 +678,7 @@ function renderStudentPortalView() {
 }
 
 function switchStudentPortalTab(tab) {
-  ['absen', 'kehadiran', 'prestasi', 'pelanggaran'].forEach(t => {
+  ['absen', 'kehadiran', 'izin', 'prestasi', 'pelanggaran'].forEach(t => {
     const el = document.getElementById('studentPortal-' + t);
     const btn = document.getElementById('studentTabBtn-' + t);
     if (el) el.classList.add('hidden');
@@ -483,6 +700,7 @@ function switchStudentPortalTab(tab) {
       studentGeoWatcher = null;
     }
     if (tab === 'kehadiran') renderStudentMyPresensi();
+    else if (tab === 'izin') renderStudentMyIzin();
     else if (tab === 'prestasi') renderStudentMyPrestasi();
     else if (tab === 'pelanggaran') renderStudentMyPelanggaran();
   }
@@ -583,15 +801,21 @@ async function submitStudentSelfPresensi() {
   const tglStr = now.toISOString().split('T')[0];
   const jamStr = now.toTimeString().split(' ')[0].substring(0, 5);
 
+  const batasTerlambat = appState.pengaturan?.toleransiTerlambat || '07:15';
+  let status = 'Hadir';
+  if (jamStr > batasTerlambat) {
+    status = 'Terlambat';
+  }
+
   const payload = {
     tanggal: tglStr,
     jam: jamStr,
     nisn: currentStudentSession.nisn,
     nama: currentStudentSession.nama,
     kelas: currentStudentSession.rombel,
-    status: 'Hadir',
+    status: status,
     metode: 'Wajah Mandiri',
-    keterangan: `Absen Mandiri GPS: ${studentCurrentDistance || 0}m`,
+    keterangan: `Absen Mandiri GPS: ${studentCurrentDistance || 0}m (${status})`,
     fotoWajahBase64: dataUrl
   };
 
@@ -601,7 +825,7 @@ async function submitStudentSelfPresensi() {
 
   if (res.success) {
     playBeepSound();
-    alert(`Presensi Wajah Berhasil!\n\nNama: ${currentStudentSession.nama}\nTanggal: ${tglStr}\nJam: ${jamStr}\nStatus: Hadir`);
+    alert(`Presensi Wajah Berhasil!\n\nNama: ${currentStudentSession.nama}\nTanggal: ${tglStr}\nJam: ${jamStr}\nStatus: ${status}`);
     loadDataSWR(true);
     switchStudentPortalTab('kehadiran');
   } else {
@@ -617,14 +841,16 @@ function renderStudentMyPresensi() {
 
   const myLogs = appState.presensiSiswa.filter(p => p.nisn.toString() === currentStudentSession.nisn.toString());
 
-  let hadir = 0, sakitIzin = 0, alpa = 0;
+  let hadir = 0, terlambat = 0, pulangCepat = 0, sakitIzin = 0, alpa = 0;
   myLogs.forEach(p => {
     if (p.status === 'Hadir') hadir++;
+    else if (p.status === 'Terlambat') terlambat++;
+    else if (p.status === 'Pulang Cepat') pulangCepat++;
     else if (p.status === 'Sakit' || p.status === 'Izin') sakitIzin++;
     else if (p.status === 'Alpa') alpa++;
   });
   const total = myLogs.length;
-  const persen = total > 0 ? Math.round((hadir / total) * 100) : 0;
+  const persen = total > 0 ? Math.round(((hadir + terlambat) / total) * 100) : 0;
 
   if (document.getElementById('myStudentPersen')) document.getElementById('myStudentPersen').innerText = persen + '%';
   if (document.getElementById('myStudentHadir')) document.getElementById('myStudentHadir').innerText = hadir;
@@ -638,8 +864,10 @@ function renderStudentMyPresensi() {
 
   myLogs.forEach((p, idx) => {
     let badge = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    if (p.status === 'Sakit') badge = 'bg-amber-50 text-amber-700 border-amber-200';
-    else if (p.status === 'Izin') badge = 'bg-blue-50 text-blue-700 border-blue-200';
+    if (p.status === 'Terlambat') badge = 'bg-amber-50 text-amber-700 border-amber-200';
+    else if (p.status === 'Pulang Cepat') badge = 'bg-orange-50 text-orange-700 border-orange-200';
+    else if (p.status === 'Sakit') badge = 'bg-blue-50 text-blue-700 border-blue-200';
+    else if (p.status === 'Izin') badge = 'bg-indigo-50 text-indigo-700 border-indigo-200';
     else if (p.status === 'Alpa') badge = 'bg-rose-50 text-rose-700 border-rose-200';
 
     const fotoWajah = p.fotoWajahUrl 
@@ -654,6 +882,35 @@ function renderStudentMyPresensi() {
         <td class="p-3"><span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${badge}">${p.status}</span></td>
         <td class="p-3 text-center">${fotoWajah}</td>
         <td class="p-3 text-slate-500">${p.keterangan || '-'}</td>
+      </tr>
+    `;
+  });
+}
+
+function renderStudentMyIzin() {
+  if (!currentStudentSession) return;
+  const tbody = document.getElementById('studentIzinHistoryBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const myIzin = (appState.pengajuanIzin || []).filter(i => i.role === 'Siswa' && i.targetId.toString() === currentStudentSession.nisn.toString());
+
+  if (myIzin.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-slate-400">Belum ada pengajuan izin dari Anda.</td></tr>`;
+    return;
+  }
+
+  myIzin.forEach(i => {
+    let badge = "bg-amber-100 text-amber-800";
+    if (i.status === 'Disetujui') badge = "bg-emerald-100 text-emerald-800 font-bold";
+    else if (i.status === 'Ditolak') badge = "bg-rose-100 text-rose-800 font-bold";
+
+    tbody.innerHTML += `
+      <tr class="hover:bg-slate-50">
+        <td class="p-2.5">${i.tanggalMulai} s.d ${i.tanggalSelesai}</td>
+        <td class="p-2.5 font-semibold text-slate-700">${i.jenisIzin}</td>
+        <td class="p-2.5 text-slate-500">${i.alasan}</td>
+        <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] ${badge}">${i.status}</span></td>
       </tr>
     `;
   });
@@ -833,15 +1090,21 @@ async function capturePresensiSiswaWajah() {
   const tglStr = now.toISOString().split('T')[0];
   const jamStr = now.toTimeString().split(' ')[0].substring(0, 5);
 
+  const batasTerlambat = appState.pengaturan?.toleransiTerlambat || '07:15';
+  let status = 'Hadir';
+  if (jamStr > batasTerlambat) {
+    status = 'Terlambat';
+  }
+
   const payload = {
     tanggal: tglStr,
     jam: jamStr,
     nisn: siswa.nisn,
     nama: siswa.nama,
     kelas: siswa.rombel,
-    status: 'Hadir',
+    status: status,
     metode: 'Scan Wajah',
-    keterangan: 'Presensi Kamera Wajah Sekolah',
+    keterangan: `Presensi Kamera Wajah Sekolah (${status})`,
     fotoWajahBase64: dataUrl
   };
 
@@ -849,7 +1112,7 @@ async function capturePresensiSiswaWajah() {
   showPresensiSiswaAlert(`Menyimpan presensi wajah ${siswa.nama}...`, 'info');
   const res = await apiPost('presensi.recordSiswa', payload);
   if (res.success) {
-    showPresensiSiswaAlert(`Presensi Wajah Berhasil: ${siswa.nama} Hadir!`, 'success');
+    showPresensiSiswaAlert(`Presensi Wajah Berhasil: ${siswa.nama} ${status} pk. ${jamStr}!`, 'success');
     loadDataSWR(true);
   } else {
     showPresensiSiswaAlert('Gagal: ' + res.message, 'error');
@@ -884,18 +1147,22 @@ function renderPresensiSiswaTable() {
     return true;
   });
 
-  let hadir = 0, sakit = 0, izin = 0, alpa = 0;
+  let hadir = 0, terlambat = 0, pulangCepat = 0, sakit = 0, izin = 0, alpa = 0;
   filtered.forEach(p => {
     if (p.status === 'Hadir') hadir++;
+    else if (p.status === 'Terlambat') terlambat++;
+    else if (p.status === 'Pulang Cepat') pulangCepat++;
     else if (p.status === 'Sakit') sakit++;
     else if (p.status === 'Izin') izin++;
     else if (p.status === 'Alpa') alpa++;
   });
   const total = filtered.length;
-  const persen = total > 0 ? Math.round((hadir / total) * 100) : 0;
+  const persen = total > 0 ? Math.round(((hadir + terlambat) / total) * 100) : 0;
 
   if (document.getElementById('kpiSiswaPersen')) document.getElementById('kpiSiswaPersen').innerText = persen + '%';
   if (document.getElementById('kpiSiswaHadir')) document.getElementById('kpiSiswaHadir').innerText = hadir;
+  if (document.getElementById('kpiSiswaTerlambat')) document.getElementById('kpiSiswaTerlambat').innerText = terlambat;
+  if (document.getElementById('kpiSiswaPulangCepat')) document.getElementById('kpiSiswaPulangCepat').innerText = pulangCepat;
   if (document.getElementById('kpiSiswaSakit')) document.getElementById('kpiSiswaSakit').innerText = sakit;
   if (document.getElementById('kpiSiswaIzin')) document.getElementById('kpiSiswaIzin').innerText = izin;
   if (document.getElementById('kpiSiswaAlpa')) document.getElementById('kpiSiswaAlpa').innerText = alpa;
@@ -907,8 +1174,10 @@ function renderPresensiSiswaTable() {
 
   filtered.forEach((p, idx) => {
     let badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    if (p.status === 'Sakit') badgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
-    else if (p.status === 'Izin') badgeColor = 'bg-blue-50 text-blue-700 border-blue-200';
+    if (p.status === 'Terlambat') badgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
+    else if (p.status === 'Pulang Cepat') badgeColor = 'bg-orange-50 text-orange-700 border-orange-200';
+    else if (p.status === 'Sakit') badgeColor = 'bg-blue-50 text-blue-700 border-blue-200';
+    else if (p.status === 'Izin') badgeColor = 'bg-indigo-50 text-indigo-700 border-indigo-200';
     else if (p.status === 'Alpa') badgeColor = 'bg-rose-50 text-rose-700 border-rose-200';
 
     const fotoWajahHtml = p.fotoWajahUrl 
@@ -932,7 +1201,10 @@ function renderPresensiSiswaTable() {
         <td class="p-3 text-center">${fotoWajahHtml}</td>
         <td class="p-3 text-slate-600 text-xs">${p.keterangan || '-'}</td>
         <td class="p-3 text-center">
-          <button onclick="deletePresensiSiswa(${p.rowId})" class="p-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition"><i class="fa-solid fa-trash"></i></button>
+          <div class="flex items-center justify-center gap-1">
+            <button onclick="openEditPresensiModal('siswa', ${p.rowId})" class="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition" title="Koreksi Presensi"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button onclick="deletePresensiSiswa(${p.rowId})" class="p-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition" title="Hapus Presensi"><i class="fa-solid fa-trash"></i></button>
+          </div>
         </td>
       </tr>
     `;
@@ -1107,15 +1379,21 @@ async function capturePresensiGuruWajah() {
   const tglStr = now.toISOString().split('T')[0];
   const jamStr = now.toTimeString().split(' ')[0].substring(0, 5);
 
+  const batasTerlambat = appState.pengaturan?.toleransiTerlambat || '07:15';
+  let status = 'Hadir';
+  if (jamStr > batasTerlambat) {
+    status = 'Terlambat';
+  }
+
   const payload = {
     tanggal: tglStr,
     jam: jamStr,
     nip: guru.nip || '-',
     namaGuru: guru.namaGuru,
     jabatan: guru.jabatan,
-    status: 'Hadir',
+    status: status,
     metode: 'Scan Wajah',
-    keterangan: 'Presensi Kamera Wajah Guru',
+    keterangan: `Presensi Kamera Wajah Guru (${status})`,
     fotoWajahBase64: dataUrl
   };
 
@@ -1123,7 +1401,7 @@ async function capturePresensiGuruWajah() {
   showPresensiGuruAlert(`Menyimpan presensi guru ${guru.namaGuru}...`, 'info');
   const res = await apiPost('presensi.recordGuru', payload);
   if (res.success) {
-    showPresensiGuruAlert(`Presensi Berhasil: ${guru.namaGuru} Hadir!`, 'success');
+    showPresensiGuruAlert(`Presensi Berhasil: ${guru.namaGuru} ${status} pk. ${jamStr}!`, 'success');
     loadDataSWR(true);
   } else {
     showPresensiGuruAlert('Gagal: ' + res.message, 'error');
@@ -1156,18 +1434,22 @@ function renderPresensiGuruTable() {
     return true;
   });
 
-  let hadir = 0, sakit = 0, izin = 0, alpa = 0;
+  let hadir = 0, terlambat = 0, pulangCepat = 0, sakit = 0, izin = 0, alpa = 0;
   filtered.forEach(p => {
     if (p.status === 'Hadir') hadir++;
+    else if (p.status === 'Terlambat') terlambat++;
+    else if (p.status === 'Pulang Cepat') pulangCepat++;
     else if (p.status === 'Sakit') sakit++;
     else if (p.status === 'Izin') izin++;
     else if (p.status === 'Alpa') alpa++;
   });
   const total = filtered.length;
-  const persen = total > 0 ? Math.round((hadir / total) * 100) : 0;
+  const persen = total > 0 ? Math.round(((hadir + terlambat) / total) * 100) : 0;
 
   if (document.getElementById('kpiGuruPersen')) document.getElementById('kpiGuruPersen').innerText = persen + '%';
   if (document.getElementById('kpiGuruHadir')) document.getElementById('kpiGuruHadir').innerText = hadir;
+  if (document.getElementById('kpiGuruTerlambat')) document.getElementById('kpiGuruTerlambat').innerText = terlambat;
+  if (document.getElementById('kpiGuruPulangCepat')) document.getElementById('kpiGuruPulangCepat').innerText = pulangCepat;
   if (document.getElementById('kpiGuruSakit')) document.getElementById('kpiGuruSakit').innerText = sakit;
   if (document.getElementById('kpiGuruIzin')) document.getElementById('kpiGuruIzin').innerText = izin;
   if (document.getElementById('kpiGuruAlpa')) document.getElementById('kpiGuruAlpa').innerText = alpa;
@@ -1179,8 +1461,10 @@ function renderPresensiGuruTable() {
 
   filtered.forEach((p, idx) => {
     let badgeColor = 'bg-teal-50 text-teal-700 border-teal-200';
-    if (p.status === 'Sakit') badgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
-    else if (p.status === 'Izin') badgeColor = 'bg-blue-50 text-blue-700 border-blue-200';
+    if (p.status === 'Terlambat') badgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
+    else if (p.status === 'Pulang Cepat') badgeColor = 'bg-orange-50 text-orange-700 border-orange-200';
+    else if (p.status === 'Sakit') badgeColor = 'bg-blue-50 text-blue-700 border-blue-200';
+    else if (p.status === 'Izin') badgeColor = 'bg-indigo-50 text-indigo-700 border-indigo-200';
     else if (p.status === 'Alpa') badgeColor = 'bg-rose-50 text-rose-700 border-rose-200';
 
     const fotoWajahHtml = p.fotoWajahUrl 
@@ -1205,7 +1489,10 @@ function renderPresensiGuruTable() {
         <td class="p-3 text-center">${fotoWajahHtml}</td>
         <td class="p-3 text-slate-600 text-xs">${p.keterangan || '-'}</td>
         <td class="p-3 text-center">
-          <button onclick="deletePresensiGuru(${p.rowId})" class="p-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition"><i class="fa-solid fa-trash"></i></button>
+          <div class="flex items-center justify-center gap-1">
+            <button onclick="openEditPresensiModal('guru', ${p.rowId})" class="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition" title="Koreksi Presensi"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button onclick="deletePresensiGuru(${p.rowId})" class="p-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition" title="Hapus Presensi"><i class="fa-solid fa-trash"></i></button>
+          </div>
         </td>
       </tr>
     `;
@@ -1424,13 +1711,70 @@ function closeIdCardModal() {
   document.getElementById('idCardModal').classList.add('hidden');
 }
 
+function previewMyTeacherCard() {
+  if (!currentGuruSession) return;
+  previewSingleTeacherCard(currentGuruSession);
+}
+
+function previewMyStudentCard() {
+  if (!currentStudentSession) return;
+  previewSingleStudentCard(currentStudentSession);
+}
+
 function printRenderedCards() {
   const container = document.getElementById('idCardPreviewContainer');
   const printGrid = document.getElementById('printCardsGrid');
-  printGrid.innerHTML = container.innerHTML;
+  const printSection = document.getElementById('printSection');
+
+  if (!container || !printGrid || !printSection) return;
+
+  // Bersihkan grid cetak dan clone element
+  printGrid.innerHTML = '';
+  const cards = container.querySelectorAll('.id-card-wrapper');
+  
+  if (cards.length === 0) {
+    alert('Tidak ada kartu yang siap dicetak.');
+    return;
+  }
+
+  cards.forEach(card => {
+    const clone = card.cloneNode(true);
+    // Konversi semua canvas QRCode asli ke image pada elemen clone agar tidak blank saat print
+    const origCanvases = card.querySelectorAll('canvas');
+    const cloneCanvases = clone.querySelectorAll('canvas');
+
+    origCanvases.forEach((origCanvas, idx) => {
+      try {
+        const dataUrl = origCanvas.toDataURL('image/png');
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        img.style.width = '82px';
+        img.style.height = '82px';
+        img.style.display = 'block';
+        img.style.margin = '0 auto';
+        if (cloneCanvases[idx] && cloneCanvases[idx].parentNode) {
+          cloneCanvases[idx].parentNode.replaceChild(img, cloneCanvases[idx]);
+        }
+      } catch (e) {
+        console.warn('Canvas to Image error during print preparation:', e);
+      }
+    });
+
+    printGrid.appendChild(clone);
+  });
+
+  // Tampilkan printSection dan sembunyikan modal agar tidak konflik layout
+  printSection.classList.remove('hidden');
+  printSection.style.display = 'block';
+
   setTimeout(() => {
     window.print();
-  }, 300);
+    // Kembalikan status display setelah jendela cetak ditutup
+    setTimeout(() => {
+      printSection.classList.add('hidden');
+      printSection.style.display = 'none';
+    }, 600);
+  }, 350);
 }
 
 // ============================================
@@ -1706,6 +2050,259 @@ function downloadKonselingTemplate() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Data Konseling");
   XLSX.writeFile(wb, "Template_Import_Konseling.xlsx");
+}
+
+function downloadPelanggaranTemplate() {
+  downloadCatatanTemplate();
+}
+
+// ============================================
+// MODUL EKSPOR DOKUMEN: EXCEL, WORD & PDF (POIN 3)
+// ============================================
+function exportData(entity, format) {
+  let title = 'Laporan Data';
+  let dataList = [];
+  let headers = [];
+  let keys = [];
+
+  if (entity === 'siswa') {
+    title = 'Daftar Data Siswa SDN Pilangrejo 1';
+    dataList = appState.students;
+    headers = ['No', 'Nama Siswa', 'NISN', 'NIPD', 'JK', 'Kelas', 'TTL', 'Alamat', 'No HP', 'Nama Ayah', 'Nama Ibu'];
+    keys = ['nama', 'nisn', 'nipd', 'jenisKelamin', 'rombel', 'ttl', 'alamat', 'nomerHp', 'namaAyah', 'namaIbu'];
+  } else if (entity === 'guru') {
+    title = 'Daftar Tenaga Pendidik & Kependidikan';
+    dataList = appState.teachers;
+    headers = ['No', 'Nama Guru', 'NIP', 'Jabatan', 'No HP', 'Email', 'Pendidikan'];
+    keys = ['namaGuru', 'nip', 'jabatan', 'noHp', 'email', 'pendidikan'];
+  } else if (entity === 'prestasi') {
+    title = 'Daftar Rekap Prestasi Siswa';
+    dataList = appState.prestasi;
+    headers = ['No', 'Tanggal', 'Nama Siswa', 'Kelas', 'Lomba', 'Juara', 'Tingkat', 'Penyelenggara'];
+    keys = ['tanggal', 'namaSiswa', 'kelas', 'namaLomba', 'juara', 'tingkat', 'penyelenggara'];
+  } else if (entity === 'pelanggaran') {
+    title = 'Daftar Catatan Pelanggaran & Poin Siswa';
+    dataList = appState.catatanPelanggaran;
+    headers = ['No', 'Tanggal', 'Nama Siswa', 'Kelas', 'Pelanggaran', 'Poin', 'Tindak Lanjut', 'Guru', 'Status'];
+    keys = ['tanggal', 'namaSiswa', 'kelas', 'jenisPelanggaran', 'poin', 'tindakLanjut', 'guruPendamping', 'keterangan'];
+  } else if (entity === 'konseling') {
+    title = 'Daftar Layanan Bimbingan & Konseling';
+    dataList = appState.konseling;
+    headers = ['No', 'Tanggal', 'Nama Siswa', 'Kelas', 'Permasalahan', 'Layanan', 'Rencana Tindak', 'Guru', 'Status'];
+    keys = ['tanggal', 'namaSiswa', 'kelas', 'permasalahan', 'jenisLayanan', 'rencanaTindakLanjut', 'guruPendamping', 'keterangan'];
+  }
+
+  if (dataList.length === 0) {
+    alert('Tidak ada data yang dapat diekspor!');
+    return;
+  }
+
+  if (format === 'excel') {
+    const aoa = [
+      [appState.profile.namaSekolah || 'SD NEGERI PILANGREJO 1'],
+      [title],
+      [`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`],
+      [],
+      headers
+    ];
+    dataList.forEach((item, idx) => {
+      const row = [idx + 1];
+      keys.forEach(k => {
+        if (k === 'ttl') row.push(`${item.tempatLahir || ''}, ${item.tanggalLahir || ''}`);
+        else row.push(item[k] || '-');
+      });
+      aoa.push(row);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, entity.toUpperCase());
+    XLSX.writeFile(wb, `${entity}_${Date.now()}.xlsx`);
+  } else if (format === 'word' || format === 'pdf') {
+    const rows = dataList.map((item, idx) => {
+      const row = [idx + 1];
+      keys.forEach(k => {
+        if (k === 'ttl') row.push(`${item.tempatLahir || ''}, ${item.tanggalLahir || ''}`);
+        else row.push(item[k] || '-');
+      });
+      return row;
+    });
+    exportDataCustomTable(title, headers, rows, format, entity);
+  }
+}
+
+function exportDataCustomTable(title, headers, rows, format, filename) {
+  let tableHtml = `<table border="1" cellspacing="0" cellpadding="5" style="border-collapse:collapse;width:100%;font-family:sans-serif;font-size:10px;">
+    <tr style="background:#047857;color:#ffffff;font-weight:bold;text-align:center;">`;
+  headers.forEach(h => { tableHtml += `<th>${h}</th>`; });
+  tableHtml += `</tr>`;
+  rows.forEach((r, idx) => {
+    tableHtml += `<tr style="${idx % 2 === 1 ? 'background:#f8fafc;' : ''}">`;
+    r.forEach((cell, cIdx) => {
+      const align = (cIdx === 0) ? 'text-align:center;' : 'text-align:left;';
+      tableHtml += `<td style="${align}">${cell}</td>`;
+    });
+    tableHtml += `</tr>`;
+  });
+  tableHtml += `</table>`;
+
+  if (format === 'word') {
+    const docContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head><meta charset='utf-8'><title>${title}</title>
+      <style>
+        body { font-family: 'Times New Roman', serif; font-size: 11pt; margin: 15mm; }
+        .kop { text-align: center; border-bottom: 3px double #000; padding-bottom: 6px; margin-bottom: 14px; }
+        .kop h2 { margin: 0; font-size: 13pt; font-weight: bold; }
+        .kop h3 { margin: 2px 0; font-size: 11pt; }
+        .kop p { margin: 0; font-size: 9pt; color: #444; }
+        .title { text-align: center; font-weight: bold; font-size: 12pt; margin: 12px 0 8px 0; text-transform: uppercase; }
+        .ttd { margin-top: 25px; float: right; width: 230px; text-align: center; font-size: 10pt; }
+      </style>
+      </head>
+      <body>
+        <div class="kop">
+          <h2>PEMERINTAH KABUPATEN DEMAK</h2>
+          <h2>DINAS PENDIDIKAN DAN KEBUDAYAAN</h2>
+          <h3>${(appState.profile.namaSekolah || 'SD NEGERI PILANGREJO 1').toUpperCase()}</h3>
+          <p>${appState.profile.alamat || 'Kec. Karangawen, Kab. Demak, Jawa Tengah'}</p>
+        </div>
+        <div class="title">${title}</div>
+        <p style="font-size:9pt;color:#555;">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        ${tableHtml}
+        <div class="ttd">
+          <p>Pilangrejo, ${new Date().toLocaleDateString('id-ID')}</p>
+          <p>Kepala Sekolah,</p>
+          <br><br><br>
+          <p style="font-weight:bold;text-decoration:underline;">${appState.profile.namaKepsek || 'Kepala Sekolah'}</p>
+          <p>NIP. -</p>
+        </div>
+      </body>
+      </html>
+    `;
+    const blob = new Blob(['\ufeff' + docContent], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename}_${Date.now()}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } else if (format === 'pdf') {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          @page { size: A4 landscape; margin: 12mm; }
+          body { font-family: sans-serif; margin: 0; color: #1e293b; }
+          .kop { text-align: center; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 10px; }
+          .kop h2 { margin: 0; font-size: 13pt; }
+          .kop p { margin: 2px 0 0 0; font-size: 8pt; color: #475569; }
+          .title { text-align: center; font-weight: bold; font-size: 11pt; margin: 8px 0; }
+          .ttd-box { margin-top: 20px; float: right; width: 200px; text-align: center; font-size: 9pt; }
+        </style>
+      </head>
+      <body>
+        <div class="kop">
+          <h2>${(appState.profile.namaSekolah || 'SD NEGERI PILANGREJO 1').toUpperCase()}</h2>
+          <p>${appState.profile.alamat || 'Kec. Karangawen, Kab. Demak, Jawa Tengah'}</p>
+        </div>
+        <div class="title">${title}</div>
+        ${tableHtml}
+        <div class="ttd-box">
+          <p>Pilangrejo, ${new Date().toLocaleDateString('id-ID')}</p>
+          <p>Mengetahui,<br>Kepala Sekolah</p>
+          <br><br><br>
+          <p style="font-weight:bold;text-decoration:underline;">${appState.profile.namaKepsek || 'Kepala Sekolah'}</p>
+        </div>
+        <script>
+          setTimeout(() => { window.print(); }, 400);
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+}
+
+function printPelanggaranReport(format) { exportData('pelanggaran', format); }
+function printKonselingReport(format) { exportData('konseling', format); }
+
+function exportPresensiSiswa(format) {
+  const filterBulan = document.getElementById('filterPresensiSiswaBulan')?.value || '';
+  const filterTgl = document.getElementById('filterPresensiSiswaTanggal')?.value || '';
+  const filterKelas = document.getElementById('filterPresensiSiswaKelas')?.value || '';
+  const filterStatus = document.getElementById('filterPresensiSiswaStatus')?.value || '';
+
+  const filtered = appState.presensiSiswa.filter(p => {
+    if (filterBulan && (!p.tanggal || !p.tanggal.startsWith(filterBulan))) return false;
+    if (filterTgl && p.tanggal !== filterTgl) return false;
+    if (filterKelas && p.kelas !== filterKelas) return false;
+    if (filterStatus && p.status !== filterStatus) return false;
+    return true;
+  });
+
+  const headers = ['No', 'Tanggal', 'Jam', 'Nama Siswa', 'NISN', 'Kelas', 'Metode', 'Status', 'Keterangan'];
+  const title = `Laporan Rekap Presensi Siswa ${filterBulan ? 'Bulan ' + filterBulan : ''} ${filterKelas ? 'Kelas ' + filterKelas : ''}`;
+
+  if (format === 'excel') {
+    const aoa = [
+      [appState.profile.namaSekolah || 'SD NEGERI PILANGREJO 1'],
+      [title],
+      [`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`],
+      [],
+      headers
+    ];
+    filtered.forEach((p, idx) => {
+      aoa.push([idx + 1, p.tanggal, p.jam || '-', p.nama, p.nisn, p.kelas, p.metode || 'Manual', p.status, p.keterangan || '-']);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Presensi_Siswa");
+    XLSX.writeFile(wb, `Presensi_Siswa_${Date.now()}.xlsx`);
+  } else {
+    exportDataCustomTable(title, headers, filtered.map((p, idx) => [
+      idx + 1, p.tanggal, p.jam || '-', p.nama, p.nisn, p.kelas, p.metode || 'Manual', p.status, p.keterangan || '-'
+    ]), format, 'Presensi_Siswa');
+  }
+}
+
+function exportPresensiGuru(format) {
+  const filterBulan = document.getElementById('filterPresensiGuruBulan')?.value || '';
+  const filterTgl = document.getElementById('filterPresensiGuruTanggal')?.value || '';
+  const filterStatus = document.getElementById('filterPresensiGuruStatus')?.value || '';
+
+  const filtered = appState.presensiGuru.filter(p => {
+    if (filterBulan && (!p.tanggal || !p.tanggal.startsWith(filterBulan))) return false;
+    if (filterTgl && p.tanggal !== filterTgl) return false;
+    if (filterStatus && p.status !== filterStatus) return false;
+    return true;
+  });
+
+  const headers = ['No', 'Tanggal', 'Jam', 'Nama Guru', 'NIP', 'Jabatan', 'Metode', 'Status', 'Keterangan'];
+  const title = `Laporan Rekap Presensi Dewan Guru & Staf ${filterBulan ? 'Bulan ' + filterBulan : ''}`;
+
+  if (format === 'excel') {
+    const aoa = [
+      [appState.profile.namaSekolah || 'SD NEGERI PILANGREJO 1'],
+      [title],
+      [`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`],
+      [],
+      headers
+    ];
+    filtered.forEach((p, idx) => {
+      aoa.push([idx + 1, p.tanggal, p.jam || '-', p.namaGuru, p.nip, p.jabatan || '-', p.metode || 'Manual', p.status, p.keterangan || '-']);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Presensi_Guru");
+    XLSX.writeFile(wb, `Presensi_Guru_${Date.now()}.xlsx`);
+  } else {
+    exportDataCustomTable(title, headers, filtered.map((p, idx) => [
+      idx + 1, p.tanggal, p.jam || '-', p.namaGuru, p.nip, p.jabatan || '-', p.metode || 'Manual', p.status, p.keterangan || '-'
+    ]), format, 'Presensi_Guru');
+  }
 }
 
 // ============================================
@@ -3192,6 +3789,937 @@ async function handleExecuteMigrasi() {
     loadDataSWR(true);
   } else {
     alert('Migrasi gagal: ' + res.message);
+  }
+}
+
+// ============================================
+// 14. PEREKAMAN WAJAH SISWA & GURU (POIN 4)
+// ============================================
+function openRekamWajahModal(role = 'Siswa') {
+  const roleInput = document.getElementById('rekamWajahTargetRole');
+  if (roleInput) roleInput.value = role;
+
+  const title = document.getElementById('rekamWajahTitle');
+  if (title) title.innerHTML = `<i class="fa-solid fa-face-smile text-indigo-600"></i> Perekaman Data Wajah ${role}`;
+
+  const label = document.getElementById('rekamWajahSelectLabel');
+  if (label) label.innerText = `Pilih ${role} yang Akan Direkam:`;
+
+  const select = document.getElementById('rekamWajahTargetSelect');
+  if (select) {
+    select.innerHTML = `<option value="">-- Pilih ${role} --</option>`;
+    if (role === 'Siswa') {
+      appState.students.forEach(s => {
+        select.innerHTML += `<option value="${s.nisn}" data-name="${s.nama}">${s.nama} (${s.rombel} - NISN: ${s.nisn})</option>`;
+      });
+    } else {
+      appState.teachers.forEach(g => {
+        select.innerHTML += `<option value="${g.nip || g.namaGuru}" data-name="${g.namaGuru}">${g.namaGuru} (NIP: ${g.nip || '-'})</option>`;
+      });
+    }
+  }
+
+  const existingBox = document.getElementById('rekamStatusExisting');
+  if (existingBox) existingBox.classList.add('hidden');
+
+  const modal = document.getElementById('modalRekamWajah');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  startRekamWajahCamera();
+}
+
+function closeRekamWajahModal() {
+  if (videoStreamRekam) {
+    videoStreamRekam.getTracks().forEach(t => t.stop());
+    videoStreamRekam = null;
+  }
+  const modal = document.getElementById('modalRekamWajah');
+  if (modal) {
+    modal.classList.remove('flex');
+    modal.classList.add('hidden');
+  }
+}
+
+function startRekamWajahCamera() {
+  const video = document.getElementById('rekamWajahVideo');
+  const spinner = document.getElementById('cameraLoadingRekam');
+  if (spinner) spinner.classList.remove('hidden');
+
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } })
+      .then(stream => {
+        if (spinner) spinner.classList.add('hidden');
+        videoStreamRekam = stream;
+        if (video) video.srcObject = stream;
+      })
+      .catch(err => {
+        if (spinner) spinner.classList.add('hidden');
+        alert('Tidak dapat mengaktifkan kamera perekaman wajah: ' + err.message);
+      });
+  }
+}
+
+function onSelectRekamWajahTarget() {
+  const select = document.getElementById('rekamWajahTargetSelect');
+  if (!select) return;
+  const targetId = select.value;
+  const role = document.getElementById('rekamWajahTargetRole')?.value || 'Siswa';
+  const existingBox = document.getElementById('rekamStatusExisting');
+  const existingThumb = document.getElementById('rekamExistingThumb');
+
+  if (!targetId || !appState.rekamWajah || !existingBox) {
+    if (existingBox) existingBox.classList.add('hidden');
+    return;
+  }
+
+  const found = appState.rekamWajah.find(r => r.role === role && r.targetId.toString() === targetId.toString());
+  if (found) {
+    existingBox.classList.remove('hidden');
+    if (existingThumb) existingThumb.src = found.fotoWajahUrl || '';
+  } else {
+    existingBox.classList.add('hidden');
+  }
+}
+
+async function captureAndSaveRekamWajah() {
+  const role = document.getElementById('rekamWajahTargetRole')?.value || 'Siswa';
+  const select = document.getElementById('rekamWajahTargetSelect');
+  if (!select) return;
+  const targetId = select.value;
+  const targetName = select.options[select.selectedIndex]?.getAttribute('data-name');
+
+  if (!targetId || !targetName) {
+    alert(`Silakan pilih ${role} terlebih dahulu!`);
+    return;
+  }
+
+  const video = document.getElementById('rekamWajahVideo');
+  const canvas = document.getElementById('rekamWajahCanvas');
+  canvas.width = 400;
+  canvas.height = 300;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, 400, 300);
+  const base64Data = canvas.toDataURL('image/jpeg', 0.7);
+
+  // Generate visual descriptor vector
+  const imgData = ctx.getImageData(50, 50, 300, 200);
+  let descriptorArr = [];
+  for (let i = 0; i < 64; i++) {
+    let sum = 0;
+    const offset = Math.floor((imgData.data.length / 64) * i);
+    for (let j = 0; j < 30; j++) {
+      sum += imgData.data[offset + j * 4] || 0;
+    }
+    descriptorArr.push(Math.round(sum / 30));
+  }
+  const descriptorStr = descriptorArr.join(',');
+
+  const btn = document.getElementById('btnCaptureRekamWajah');
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan Rekaman...';
+  btn.disabled = true;
+
+  const res = await apiPost('face.register', {
+    role,
+    targetId,
+    targetName,
+    fotoWajah: base64Data,
+    descriptor: descriptorStr
+  });
+
+  btn.innerHTML = '<i class="fa-solid fa-camera"></i> Ambil & Simpan Rekaman Wajah';
+  btn.disabled = false;
+
+  alert(res.message);
+  if (res.success) {
+    closeRekamWajahModal();
+    loadDataSWR(true);
+  }
+}
+
+// ============================================
+// 15. KOREKSI / EDIT PRESENSI (POIN 6)
+// ============================================
+function openEditPresensiModal(type, rowId) {
+  document.getElementById('editPresensiType').value = type;
+  document.getElementById('editPresensiRowId').value = rowId;
+
+  let record = null;
+  if (type === 'siswa') {
+    record = appState.presensiSiswa.find(p => p.rowId == rowId);
+    if (record) {
+      document.getElementById('editPresensiModalTitle').innerText = 'Koreksi Presensi Siswa';
+      document.getElementById('editPresensiNamaText').innerText = record.nama;
+      document.getElementById('editPresensiIdText').innerText = `NISN: ${record.nisn} | Kelas: ${record.kelas}`;
+    }
+  } else {
+    record = appState.presensiGuru.find(p => p.rowId == rowId);
+    if (record) {
+      document.getElementById('editPresensiModalTitle').innerText = 'Koreksi Presensi Guru';
+      document.getElementById('editPresensiNamaText').innerText = record.namaGuru;
+      document.getElementById('editPresensiIdText').innerText = `NIP: ${record.nip || '-'} | Jabatan: ${record.jabatan || '-'}`;
+    }
+  }
+
+  if (!record) {
+    alert('Data presensi tidak ditemukan.');
+    return;
+  }
+
+  document.getElementById('editPresensiTanggal').value = record.tanggal || '';
+  document.getElementById('editPresensiJam').value = record.jam || '';
+  document.getElementById('editPresensiStatus').value = record.status || 'Hadir';
+  document.getElementById('editPresensiKeterangan').value = record.keterangan || '';
+
+  const modal = document.getElementById('modalEditPresensi');
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeEditPresensiModal() {
+  const modal = document.getElementById('modalEditPresensi');
+  modal.classList.remove('flex');
+  modal.classList.add('hidden');
+}
+
+async function handleEditPresensiSubmit(e) {
+  e.preventDefault();
+  const type = document.getElementById('editPresensiType').value;
+  const rowId = document.getElementById('editPresensiRowId').value;
+  const tanggal = document.getElementById('editPresensiTanggal').value;
+  const jam = document.getElementById('editPresensiJam').value;
+  const status = document.getElementById('editPresensiStatus').value;
+  const keterangan = document.getElementById('editPresensiKeterangan').value;
+
+  const btn = document.getElementById('btnSubmitEditPresensi');
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+  btn.disabled = true;
+
+  const action = (type === 'siswa') ? 'presensi.updateSiswa' : 'presensi.updateGuru';
+  const res = await apiPost(action, { tanggal, jam, status, keterangan }, currentAdminToken, { rowId: parseInt(rowId) });
+
+  btn.innerHTML = '<i class="fa-solid fa-check"></i> Simpan Koreksi';
+  btn.disabled = false;
+
+  alert(res.message);
+  if (res.success) {
+    closeEditPresensiModal();
+    loadDataSWR(true);
+  }
+}
+
+// ============================================
+// 16. PORTAL GURU & WALI KELAS (POIN 7)
+// ============================================
+function renderGuruDashboard() {
+  if (!currentGuruSession) return;
+  const g = currentGuruSession;
+  const namaEl = document.getElementById('portalGuruNama');
+  if (namaEl) namaEl.innerText = g.namaGuru || g.nama || 'Bapak/Ibu Guru';
+  const nipEl = document.getElementById('portalGuruNip');
+  if (nipEl) nipEl.innerText = g.nip || '-';
+  const pendEl = document.getElementById('portalGuruPendidikan');
+  if (pendEl) pendEl.innerText = g.pendidikan || '-';
+  const jabEl = document.getElementById('portalGuruJabatan');
+  if (jabEl) jabEl.innerText = g.jabatan || 'Dewan Guru';
+  const avatarEl = document.getElementById('portalGuruAvatar');
+  if (g.fotoUrl && avatarEl) avatarEl.src = g.fotoUrl;
+
+  // Cek apakah guru ini menjadi Wali Kelas
+  const myClass = appState.classes.find(c => c.waliKelas && (c.waliKelas === g.namaGuru || c.waliKelas === g.nama));
+  const waliBadge = document.getElementById('portalGuruWaliBadge');
+  const waliKet = document.getElementById('portalGuruWaliKet');
+  const waliTabBtn = document.getElementById('guruTabBtn-walikelas');
+
+  if (myClass) {
+    if (waliBadge) waliBadge.classList.remove('hidden');
+    if (waliKet) {
+      waliKet.classList.remove('hidden');
+      const waliName = document.getElementById('portalGuruWaliKelasNama');
+      if (waliName) waliName.innerText = myClass.namaKelas;
+    }
+    if (waliTabBtn) waliTabBtn.classList.remove('hidden');
+  } else {
+    if (waliBadge) waliBadge.classList.add('hidden');
+    if (waliKet) waliKet.classList.add('hidden');
+    if (waliTabBtn) waliTabBtn.classList.add('hidden');
+  }
+
+  renderMyGuruPresensiHistory();
+  renderMyGuruIzinHistory();
+}
+
+function switchGuruPortalTab(tab) {
+  ['absen', 'kehadiran', 'izin', 'walikelas'].forEach(t => {
+    const el = document.getElementById(`guruPortal-${t}`);
+    if (el) el.classList.add('hidden');
+    const btn = document.getElementById(`guruTabBtn-${t}`);
+    if (btn) {
+      if (t === tab) {
+        btn.className = (t === 'walikelas') 
+          ? "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-amber-600 text-white shadow transition flex items-center gap-2 shrink-0"
+          : "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-teal-600 text-white shadow transition flex items-center gap-2 shrink-0";
+      } else {
+        btn.className = (t === 'walikelas')
+          ? "px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 transition flex items-center gap-2 shrink-0"
+          : "px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0";
+      }
+    }
+  });
+
+  const activeEl = document.getElementById(`guruPortal-${tab}`);
+  if (activeEl) activeEl.classList.remove('hidden');
+
+  if (tab === 'absen') {
+    startGuruSelfieCamera();
+    startGuruGeoValidation();
+  } else {
+    stopGuruCameraAndGeo();
+  }
+
+  if (tab === 'kehadiran') renderMyGuruPresensiHistory();
+  if (tab === 'izin') renderMyGuruIzinHistory();
+  if (tab === 'walikelas') renderWaliKelasStudentsTable();
+}
+
+function startGuruSelfieCamera() {
+  const video = document.getElementById('guruSelfieVideo');
+  const spinner = document.getElementById('cameraLoadingSpinnerGuru');
+  if (spinner) spinner.classList.remove('hidden');
+
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } })
+      .then(stream => {
+        if (spinner) spinner.classList.add('hidden');
+        videoStreamSelfie = stream;
+        if (video) video.srcObject = stream;
+      })
+      .catch(err => {
+        if (spinner) spinner.classList.add('hidden');
+        console.warn('Webcam Guru Error:', err);
+      });
+  }
+}
+
+function startGuruGeoValidation() {
+  if (!navigator.geolocation) {
+    const text = document.getElementById('guruGeoDistanceText');
+    if (text) text.innerText = 'Perangkat Anda tidak mendukung geolokasi GPS.';
+    return;
+  }
+  const schoolLat = parseFloat(appState.profile.latitude || '-6.892000');
+  const schoolLng = parseFloat(appState.profile.longitude || '110.612000');
+  const maxRadius = parseFloat(appState.profile.radiusPresensi || 150);
+
+  guruGeoWatcher = navigator.geolocation.watchPosition(pos => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    const dist = calculateHaversineDistance(lat, lng, schoolLat, schoolLng);
+    guruCurrentDistance = Math.round(dist);
+
+    const badge = document.getElementById('guruGeoStatusBadge');
+    const text = document.getElementById('guruGeoDistanceText');
+    const btn = document.getElementById('btnSubmitGuruSelfPresensi');
+    const tip = document.getElementById('guruSelfPresensiTip');
+
+    if (dist <= maxRadius) {
+      if (badge) {
+        badge.className = "bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full text-[10px] font-bold";
+        badge.innerText = `Dalam Radius (${guruCurrentDistance} m)`;
+      }
+      if (text) text.innerText = `Posisi Anda berada di lingkungan sekolah (jarak ${guruCurrentDistance} m dari titik pusat, maks toleransi ${maxRadius} m).`;
+      if (btn) btn.disabled = false;
+      if (tip) tip.innerText = '✅ Lokasi valid. Silakan tekan tombol untuk presensi wajah.';
+    } else {
+      if (badge) {
+        badge.className = "bg-rose-100 text-rose-800 px-2.5 py-0.5 rounded-full text-[10px] font-bold";
+        badge.innerText = `Di Luar Radius (${guruCurrentDistance} m)`;
+      }
+      if (text) text.innerText = `Jarak Anda ${guruCurrentDistance} m dari sekolah (maksimal ${maxRadius} m). Anda harus berada di area sekolah untuk presensi.`;
+      if (btn) btn.disabled = true;
+      if (tip) tip.innerText = '❌ Di luar area sekolah. Tombol dinonaktifkan.';
+    }
+  }, err => {
+    const text = document.getElementById('guruGeoDistanceText');
+    if (text) text.innerText = 'Gagal membaca titik GPS: Pastikan izin lokasi browser aktif.';
+  }, { enableHighAccuracy: true, maximumAge: 10000 });
+}
+
+function stopGuruCameraAndGeo() {
+  if (videoStreamSelfie) {
+    videoStreamSelfie.getTracks().forEach(t => t.stop());
+    videoStreamSelfie = null;
+  }
+  if (guruGeoWatcher) {
+    navigator.geolocation.clearWatch(guruGeoWatcher);
+    guruGeoWatcher = null;
+  }
+}
+
+async function submitGuruSelfPresensi() {
+  if (!currentGuruSession) return;
+  const g = currentGuruSession;
+  const video = document.getElementById('guruSelfieVideo');
+  const canvas = document.getElementById('guruSelfieCanvas');
+  canvas.width = 400;
+  canvas.height = 300;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, 400, 300);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+  const now = new Date();
+  const tglStr = now.toISOString().split('T')[0];
+  const jamStr = now.toTimeString().split(' ')[0].substring(0, 5);
+
+  const batasTerlambat = appState.pengaturan?.toleransiTerlambat || '07:15';
+  let status = 'Hadir';
+  if (jamStr > batasTerlambat) {
+    status = 'Terlambat';
+  }
+
+  const payload = {
+    tanggal: tglStr,
+    jam: jamStr,
+    nip: g.nip || '-',
+    namaGuru: g.namaGuru || g.nama,
+    jabatan: g.jabatan || 'Dewan Guru',
+    status: status,
+    metode: 'Wajah Mandiri (GPS)',
+    keterangan: `Presensi Mandiri Guru (Jarak ${guruCurrentDistance || 0}m, Status: ${status})`,
+    fotoWajahBase64: dataUrl
+  };
+
+  playBeepSound();
+  const btn = document.getElementById('btnSubmitGuruSelfPresensi');
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+  btn.disabled = true;
+
+  const res = await apiPost('presensi.recordGuru', payload);
+  btn.innerHTML = '<i class="fa-solid fa-camera"></i> Ambil Foto Wajah & Absen Sekarang';
+  btn.disabled = false;
+
+  alert(res.message);
+  if (res.success) {
+    loadDataSWR(true);
+    switchGuruPortalTab('kehadiran');
+  }
+}
+
+function renderMyGuruPresensiHistory() {
+  if (!currentGuruSession) return;
+  const g = currentGuruSession;
+  const tbody = document.getElementById('myGuruPresensiTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const myLogs = appState.presensiGuru.filter(p => {
+    return (g.nip && p.nip && p.nip.toString() === g.nip.toString()) || (p.namaGuru && p.namaGuru === (g.namaGuru || g.nama));
+  });
+
+  let hadir = 0, terlambat = 0, pulangCepat = 0, sakitIzin = 0, alpa = 0;
+  myLogs.forEach(p => {
+    if (p.status === 'Hadir') hadir++;
+    else if (p.status === 'Terlambat') terlambat++;
+    else if (p.status === 'Pulang Cepat') pulangCepat++;
+    else if (p.status === 'Sakit' || p.status === 'Izin') sakitIzin++;
+    else if (p.status === 'Alpa') alpa++;
+  });
+  const total = myLogs.length;
+  const persen = total > 0 ? Math.round(((hadir + terlambat) / total) * 100) : 0;
+
+  if (document.getElementById('myGuruPersen')) document.getElementById('myGuruPersen').innerText = persen + '%';
+  if (document.getElementById('myGuruHadir')) document.getElementById('myGuruHadir').innerText = hadir;
+  if (document.getElementById('myGuruTerlambat')) document.getElementById('myGuruTerlambat').innerText = terlambat;
+  if (document.getElementById('myGuruPulangCepat')) document.getElementById('myGuruPulangCepat').innerText = pulangCepat;
+  if (document.getElementById('myGuruSakitIzin')) document.getElementById('myGuruSakitIzin').innerText = sakitIzin;
+  if (document.getElementById('myGuruAlpa')) document.getElementById('myGuruAlpa').innerText = alpa;
+
+  if (myLogs.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400">Belum ada riwayat presensi guru tercatat.</td></tr>`;
+    return;
+  }
+
+  myLogs.forEach(p => {
+    let badge = 'bg-teal-50 text-teal-700 border-teal-200';
+    if (p.status === 'Terlambat') badge = 'bg-amber-50 text-amber-700 border-amber-200';
+    else if (p.status === 'Pulang Cepat') badge = 'bg-orange-50 text-orange-700 border-orange-200';
+    else if (p.status === 'Sakit') badge = 'bg-blue-50 text-blue-700 border-blue-200';
+    else if (p.status === 'Izin') badge = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    else if (p.status === 'Alpa') badge = 'bg-rose-50 text-rose-700 border-rose-200';
+
+    tbody.innerHTML += `
+      <tr class="hover:bg-slate-50">
+        <td class="p-3 font-semibold">${p.tanggal} <span class="text-slate-400 text-[10px]">(${p.jam || '-'})</span></td>
+        <td class="p-3"><span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px]">${p.metode || 'Manual'}</span></td>
+        <td class="p-3"><span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${badge}">${p.status}</span></td>
+        <td class="p-3 text-slate-500">${p.keterangan || '-'}</td>
+      </tr>
+    `;
+  });
+}
+
+function renderMyGuruIzinHistory() {
+  if (!currentGuruSession) return;
+  const g = currentGuruSession;
+  const tbody = document.getElementById('guruIzinHistoryBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const myIzin = (appState.pengajuanIzin || []).filter(i => {
+    return i.role === 'Guru' && ((g.nip && i.targetId && i.targetId.toString() === g.nip.toString()) || i.nama === (g.namaGuru || g.nama));
+  });
+
+  if (myIzin.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-slate-400">Belum ada pengajuan izin guru.</td></tr>`;
+    return;
+  }
+
+  myIzin.forEach(i => {
+    let badge = "bg-amber-100 text-amber-800";
+    if (i.status === 'Disetujui') badge = "bg-emerald-100 text-emerald-800 font-bold";
+    else if (i.status === 'Ditolak') badge = "bg-rose-100 text-rose-800 font-bold";
+
+    tbody.innerHTML += `
+      <tr class="hover:bg-slate-50">
+        <td class="p-2.5">${i.tanggalMulai} s.d ${i.tanggalSelesai}</td>
+        <td class="p-2.5 font-semibold text-slate-700">${i.jenisIzin}</td>
+        <td class="p-2.5 text-slate-500">${i.alasan}</td>
+        <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] ${badge}">${i.status}</span></td>
+      </tr>
+    `;
+  });
+}
+
+function renderWaliKelasStudentsTable() {
+  if (!currentGuruSession) return;
+  const g = currentGuruSession;
+  const myClass = appState.classes.find(c => c.waliKelas && (c.waliKelas === g.namaGuru || c.waliKelas === g.nama));
+  if (!myClass) return;
+
+  const tglInput = document.getElementById('filterWaliKelasTanggal');
+  if (tglInput && !tglInput.value) {
+    tglInput.value = new Date().toISOString().split('T')[0];
+  }
+  const targetTgl = tglInput?.value || new Date().toISOString().split('T')[0];
+
+  const bannerTitle = document.getElementById('waliKelasBannerTitle');
+  if (bannerTitle) bannerTitle.innerText = `Rekapitulasi Kehadiran Siswa ${myClass.namaKelas}`;
+  const tableTitle = document.getElementById('waliTableTitle');
+  if (tableTitle) tableTitle.innerText = `Daftar Siswa ${myClass.namaKelas} & Status Tanggal ${targetTgl}`;
+
+  const classStudents = appState.students.filter(s => s.rombel === myClass.namaKelas);
+  const totalBadge = document.getElementById('waliTotalSiswaBadge');
+  if (totalBadge) totalBadge.innerText = `${classStudents.length} Siswa`;
+
+  const tbody = document.getElementById('waliKelasStudentsTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  let hadir = 0, terlambat = 0, pulangCepat = 0, sakitIzin = 0, alpa = 0;
+
+  classStudents.forEach((s, idx) => {
+    const att = appState.presensiSiswa.find(p => p.nisn.toString() === s.nisn.toString() && p.tanggal === targetTgl);
+    let status = att ? att.status : 'Belum Presensi';
+    let jam = att ? (att.jam || '-') : '-';
+    let ket = att ? (att.keterangan || '-') : '-';
+
+    let badgeClass = "bg-slate-100 text-slate-500";
+    if (status === 'Hadir') { badgeClass = "bg-emerald-100 text-emerald-800 font-bold"; hadir++; }
+    else if (status === 'Terlambat') { badgeClass = "bg-amber-100 text-amber-800 font-bold"; terlambat++; }
+    else if (status === 'Pulang Cepat') { badgeClass = "bg-orange-100 text-orange-800 font-bold"; pulangCepat++; }
+    else if (status === 'Sakit' || status === 'Izin') { badgeClass = "bg-blue-100 text-blue-800 font-bold"; sakitIzin++; }
+    else if (status === 'Alpa') { badgeClass = "bg-rose-100 text-rose-800 font-bold"; alpa++; }
+
+    tbody.innerHTML += `
+      <tr class="hover:bg-slate-50">
+        <td class="p-3 text-slate-500 font-semibold">${idx + 1}</td>
+        <td class="p-3 font-bold text-slate-800">${s.nama}</td>
+        <td class="p-3 font-mono text-slate-600">${s.nisn}</td>
+        <td class="p-3">${s.jenisKelamin || '-'}</td>
+        <td class="p-3 text-center"><span class="px-2.5 py-0.5 rounded-full text-[11px] ${badgeClass}">${status}</span></td>
+        <td class="p-3 font-mono">${jam}</td>
+        <td class="p-3 text-slate-600">${ket}</td>
+      </tr>
+    `;
+  });
+
+  const total = classStudents.length;
+  const persen = total > 0 ? Math.round(((hadir + terlambat) / total) * 100) : 0;
+  if (document.getElementById('waliKpiPersen')) document.getElementById('waliKpiPersen').innerText = persen + '%';
+  if (document.getElementById('waliKpiHadir')) document.getElementById('waliKpiHadir').innerText = hadir;
+  if (document.getElementById('waliKpiTerlambat')) document.getElementById('waliKpiTerlambat').innerText = terlambat;
+  if (document.getElementById('waliKpiPulangCepat')) document.getElementById('waliKpiPulangCepat').innerText = pulangCepat;
+  if (document.getElementById('waliKpiSakitIzin')) document.getElementById('waliKpiSakitIzin').innerText = sakitIzin;
+  if (document.getElementById('waliKpiAlpa')) document.getElementById('waliKpiAlpa').innerText = alpa;
+}
+
+// ============================================
+// 17. PENGAJUAN & APPROVAL IZIN (POIN 8)
+// ============================================
+async function handleStudentIzinSubmit(e) {
+  e.preventDefault();
+  if (!currentStudentSession) return;
+  const s = currentStudentSession;
+
+  const tglMulai = document.getElementById('studentIzinTglMulai').value;
+  const tglSelesai = document.getElementById('studentIzinTglSelesai').value;
+  const jenis = document.getElementById('studentIzinJenis').value;
+  const alasan = document.getElementById('studentIzinAlasan').value;
+  const file = document.getElementById('studentIzinBuktiFile').files[0];
+
+  let buktiBase64 = null;
+  if (file) buktiBase64 = await fileToBase64(file);
+
+  const btn = document.getElementById('btnSubmitStudentIzin');
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+  btn.disabled = true;
+
+  const res = await apiPost('izin.ajukan', {
+    role: 'Siswa',
+    targetId: s.nisn,
+    nama: s.nama,
+    kelas: s.rombel || '',
+    tanggalMulai: tglMulai,
+    tanggalSelesai: tglSelesai,
+    jenisIzin: jenis,
+    alasan: alasan,
+    buktiBase64: buktiBase64
+  });
+
+  btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim Formulir Izin';
+  btn.disabled = false;
+
+  alert(res.message);
+  if (res.success) {
+    e.target.reset();
+    loadDataSWR(true);
+  }
+}
+
+async function handleGuruIzinSubmit(e) {
+  e.preventDefault();
+  if (!currentGuruSession) return;
+  const g = currentGuruSession;
+
+  const tglMulai = document.getElementById('guruIzinTglMulai').value;
+  const tglSelesai = document.getElementById('guruIzinTglSelesai').value;
+  const jenis = document.getElementById('guruIzinJenis').value;
+  const alasan = document.getElementById('guruIzinAlasan').value;
+  const file = document.getElementById('guruIzinBuktiFile').files[0];
+
+  let buktiBase64 = null;
+  if (file) buktiBase64 = await fileToBase64(file);
+
+  const btn = document.getElementById('btnSubmitGuruIzin');
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+  btn.disabled = true;
+
+  const res = await apiPost('izin.ajukan', {
+    role: 'Guru',
+    targetId: g.nip || g.namaGuru || g.nama,
+    nama: g.namaGuru || g.nama,
+    kelas: g.jabatan || 'Dewan Guru',
+    tanggalMulai: tglMulai,
+    tanggalSelesai: tglSelesai,
+    jenisIzin: jenis,
+    alasan: alasan,
+    buktiBase64: buktiBase64
+  });
+
+  btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim Pengajuan Izin Guru';
+  btn.disabled = false;
+
+  alert(res.message);
+  if (res.success) {
+    e.target.reset();
+    loadDataSWR(true);
+  }
+}
+
+function renderApprovalIzinTable() {
+  const tbody = document.getElementById('approvalIzinTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const filterRole = document.getElementById('filterIzinRole')?.value || '';
+  const filterStatus = document.getElementById('filterIzinStatus')?.value || '';
+
+  const list = (appState.pengajuanIzin || []).filter(item => {
+    if (filterRole && item.role !== filterRole) return false;
+    if (filterStatus && item.status !== filterStatus) return false;
+    return true;
+  });
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-slate-400">Belum ada pengajuan izin yang masuk.</td></tr>`;
+    return;
+  }
+
+  list.forEach((item, idx) => {
+    let statusBadge = "bg-amber-100 text-amber-800";
+    if (item.status === 'Disetujui') statusBadge = "bg-emerald-100 text-emerald-800 font-bold";
+    else if (item.status === 'Ditolak') statusBadge = "bg-rose-100 text-rose-800 font-bold";
+
+    let aksiHtml = `<span class="text-xs text-slate-400">${item.status}</span>`;
+    if (item.status === 'Menunggu') {
+      aksiHtml = `
+        <div class="flex items-center justify-center gap-1.5">
+          <button onclick="handleApproveIzin('${item.izinId}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1" title="Setujui Izin">
+            <i class="fa-solid fa-check"></i> Setujui
+          </button>
+          <button onclick="handleRejectIzin('${item.izinId}')" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1" title="Tolak Izin">
+            <i class="fa-solid fa-xmark"></i> Tolak
+          </button>
+        </div>
+      `;
+    }
+
+    const lampiranHtml = item.buktiUrl 
+      ? `<a href="${item.buktiUrl}" target="_blank" class="text-indigo-600 font-bold hover:underline flex items-center justify-center gap-1"><i class="fa-solid fa-paperclip"></i> Lihat</a>`
+      : `<span class="text-slate-300">-</span>`;
+
+    tbody.innerHTML += `
+      <tr class="hover:bg-slate-50">
+        <td class="p-3 text-slate-500 font-semibold">${idx + 1}</td>
+        <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.role === 'Guru' ? 'bg-teal-100 text-teal-800' : 'bg-purple-100 text-purple-800'}">${item.role}</span></td>
+        <td class="p-3 font-bold text-slate-800">${item.nama}<div class="text-[11px] text-slate-400 font-normal">${item.kelas || '-'}</div></td>
+        <td class="p-3 font-semibold text-slate-700">${item.jenisIzin}</td>
+        <td class="p-3 text-xs">${item.tanggalMulai} s.d ${item.tanggalSelesai}</td>
+        <td class="p-3 text-xs text-slate-600">${item.alasan}</td>
+        <td class="p-3 text-center">${lampiranHtml}</td>
+        <td class="p-3 text-center"><span class="px-2.5 py-0.5 rounded-full text-[11px] ${statusBadge}">${item.status}</span></td>
+        <td class="p-3 text-center">${aksiHtml}</td>
+      </tr>
+    `;
+  });
+}
+
+async function handleApproveIzin(izinId) {
+  if (!confirm('Setujui permohonan izin ini?\n\nSistem akan otomatis mencatat kehadiran Izin/Sakit pada Laporan Presensi sesuai rentang tanggal yang diajukan.')) return;
+  const res = await apiPost('izin.approve', { izinId }, currentAdminToken);
+  alert(res.message);
+  if (res.success) {
+    loadDataSWR(true);
+  }
+}
+
+async function handleRejectIzin(izinId) {
+  const alasan = prompt('Masukkan alasan penolakan izin:');
+  if (alasan === null) return;
+  const res = await apiPost('izin.reject', { izinId, alasanTolak: alasan || 'Tidak disetujui' }, currentAdminToken);
+  alert(res.message);
+  if (res.success) {
+    loadDataSWR(true);
+  }
+}
+
+// ============================================
+// 18. PENGATURAN SISTEM & NAIK KELAS (POIN 9)
+// ============================================
+function loadPengaturanForm() {
+  const s = appState.pengaturan || {};
+  if (document.getElementById('settingTahunAjaran')) document.getElementById('settingTahunAjaran').value = s.tahunAjaran || '2025/2026';
+  if (document.getElementById('settingSemester')) document.getElementById('settingSemester').value = s.semester || 'Genap';
+  if (document.getElementById('settingJamMasuk')) document.getElementById('settingJamMasuk').value = s.jamMasuk || '07:00';
+  if (document.getElementById('settingJamPulang')) document.getElementById('settingJamPulang').value = s.jamPulang || '13:00';
+  if (document.getElementById('settingToleransiTerlambat')) document.getElementById('settingToleransiTerlambat').value = s.toleransiTerlambat || '07:15';
+  if (document.getElementById('settingToleransiPulangCepat')) document.getElementById('settingToleransiPulangCepat').value = s.toleransiPulangCepat || '12:45';
+
+  const savedTheme = localStorage.getItem('spilsa_theme_preset') || 'indigo';
+  if (document.getElementById('settingThemePreset')) document.getElementById('settingThemePreset').value = savedTheme;
+}
+
+async function handleSavePengaturan(e) {
+  e.preventDefault();
+  const settings = {
+    tahunAjaran: document.getElementById('settingTahunAjaran').value.trim(),
+    semester: document.getElementById('settingSemester').value,
+    jamMasuk: document.getElementById('settingJamMasuk').value,
+    jamPulang: document.getElementById('settingJamPulang').value,
+    toleransiTerlambat: document.getElementById('settingToleransiTerlambat').value,
+    toleransiPulangCepat: document.getElementById('settingToleransiPulangCepat').value
+  };
+
+  const btn = document.getElementById('btnSavePengaturan');
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+  btn.disabled = true;
+
+  const res = await apiPost('pengaturan.save', settings, currentAdminToken);
+  btn.innerHTML = '<i class="fa-solid fa-check"></i> Simpan Pengaturan Sistem';
+  btn.disabled = false;
+
+  alert(res.message);
+  if (res.success) {
+    loadDataSWR(true);
+  }
+}
+
+async function handleProsesNaikKelas() {
+  const thn = document.getElementById('settingTahunAjaran')?.value || 'Tahun Ajaran Baru';
+  const confirmation = confirm(`PERINGATAN NAIK KELAS MASSAL:\n\nApakah Anda yakin ingin memproses kenaikan kelas untuk ${thn}?\n\nAturan Otomatis:\n- Siswa Kelas 6 akan berstatus Lulus / Alumni\n- Siswa Kelas 5 naik ke Kelas 6\n- Siswa Kelas 4 naik ke Kelas 5\n- Siswa Kelas 3 naik ke Kelas 4\n- Siswa Kelas 2 naik ke Kelas 3\n- Siswa Kelas 1 naik ke Kelas 2\n\nLanjutkan proses ini?`);
+  if (!confirmation) return;
+
+  const btn = document.getElementById('btnProsesNaikKelas');
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses Kenaikan Kelas...';
+  btn.disabled = true;
+
+  const res = await apiPost('pengaturan.naikKelas', {}, currentAdminToken);
+  btn.innerHTML = '<i class="fa-solid fa-arrow-trend-up"></i> Eksekusi Kenaikan Kelas';
+  btn.disabled = false;
+
+  alert(res.message);
+  if (res.success) {
+    loadDataSWR(true);
+  }
+}
+
+// ============================================
+// 19. USER MANAGEMENT (POIN 12)
+// ============================================
+function renderUsersTable() {
+  const tbody = document.getElementById('usersTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const filterRole = document.getElementById('filterUserRole')?.value || '';
+  const search = document.getElementById('searchUserKeyword')?.value.toLowerCase() || '';
+
+  const list = (appState.users || []).filter(u => {
+    if (filterRole && u.role !== filterRole) return false;
+    if (search && !u.username.toLowerCase().includes(search) && !u.nama.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">Belum ada akun pengguna di sistem.</td></tr>`;
+    return;
+  }
+
+  list.forEach((u, idx) => {
+    let roleBadge = "bg-indigo-100 text-indigo-800";
+    if (u.role === 'Guru') roleBadge = "bg-teal-100 text-teal-800";
+    else if (u.role === 'Siswa') roleBadge = "bg-purple-100 text-purple-800";
+
+    tbody.innerHTML += `
+      <tr class="hover:bg-slate-50">
+        <td class="p-3 text-slate-500 font-semibold">${idx + 1}</td>
+        <td class="p-3 font-bold text-slate-800">${u.nama}</td>
+        <td class="p-3 font-mono text-indigo-600 font-bold">${u.username}</td>
+        <td class="p-3"><span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${roleBadge}">${u.role}</span></td>
+        <td class="p-3 font-mono text-xs text-slate-600">${u.refId || '-'}</td>
+        <td class="p-3"><span class="px-2 py-0.5 rounded text-[11px] font-bold ${u.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">${u.status || 'Aktif'}</span></td>
+        <td class="p-3 text-center">
+          <div class="flex items-center justify-center gap-1.5">
+            <button onclick="openResetPasswordModal('${u.userId}')" class="p-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-xs" title="Reset Password"><i class="fa-solid fa-key"></i></button>
+            <button onclick="openUserModal('${u.userId}')" class="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs" title="Edit Akun"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button onclick="handleDeleteUser('${u.userId}')" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs" title="Hapus Akun"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+function openUserModal(userId = null) {
+  document.getElementById('userFormId').value = userId || '';
+  if (userId) {
+    const u = (appState.users || []).find(x => x.userId === userId);
+    if (u) {
+      document.getElementById('userModalTitle').innerText = 'Edit Akun Pengguna';
+      document.getElementById('userFormRole').value = u.role;
+      document.getElementById('userFormNama').value = u.nama;
+      document.getElementById('userFormUsername').value = u.username;
+      document.getElementById('userFormPassword').value = '';
+      document.getElementById('userPasswordHint').classList.remove('hidden');
+      document.getElementById('userFormRefId').value = u.refId || '';
+      document.getElementById('userFormStatus').value = u.status || 'Aktif';
+    }
+  } else {
+    document.getElementById('userModalTitle').innerText = 'Tambah Akun Pengguna';
+    document.getElementById('userFormRole').value = 'Admin';
+    document.getElementById('userFormNama').value = '';
+    document.getElementById('userFormUsername').value = '';
+    document.getElementById('userFormPassword').value = '';
+    document.getElementById('userPasswordHint').classList.add('hidden');
+    document.getElementById('userFormRefId').value = '';
+    document.getElementById('userFormStatus').value = 'Aktif';
+  }
+  document.getElementById('modalUserForm').classList.remove('hidden');
+  document.getElementById('modalUserForm').classList.add('flex');
+}
+
+function closeUserModal() {
+  document.getElementById('modalUserForm').classList.remove('flex');
+  document.getElementById('modalUserForm').classList.add('hidden');
+}
+
+function onUserRoleChange() {
+  const role = document.getElementById('userFormRole').value;
+  const refInput = document.getElementById('userFormRefId');
+  if (refInput) {
+    if (role === 'Guru') refInput.placeholder = 'Masukkan NIP Guru...';
+    else if (role === 'Siswa') refInput.placeholder = 'Masukkan NISN Siswa...';
+    else refInput.placeholder = 'NIP/NISN (Opsional)...';
+  }
+}
+
+async function handleUserFormSubmit(e) {
+  e.preventDefault();
+  const userId = document.getElementById('userFormId').value;
+  const payload = {
+    role: document.getElementById('userFormRole').value,
+    nama: document.getElementById('userFormNama').value.trim(),
+    username: document.getElementById('userFormUsername').value.trim(),
+    password: document.getElementById('userFormPassword').value.trim(),
+    refId: document.getElementById('userFormRefId').value.trim(),
+    status: document.getElementById('userFormStatus').value
+  };
+
+  const res = await apiPost('user.save', payload, currentAdminToken, { userId: userId || null });
+  alert(res.message);
+  if (res.success) {
+    closeUserModal();
+    loadDataSWR(true);
+  }
+}
+
+function openResetPasswordModal(userId) {
+  const u = (appState.users || []).find(x => x.userId === userId);
+  if (!u) return;
+  document.getElementById('resetUserId').value = userId;
+  document.getElementById('resetUserNama').innerText = u.nama;
+  document.getElementById('resetUserRole').innerText = `Role: ${u.role} | Username: ${u.username}`;
+  document.getElementById('resetNewPassword').value = '';
+  document.getElementById('modalResetPasswordUser').classList.remove('hidden');
+  document.getElementById('modalResetPasswordUser').classList.add('flex');
+}
+
+function closeResetPasswordModal() {
+  document.getElementById('modalResetPasswordUser').classList.remove('flex');
+  document.getElementById('modalResetPasswordUser').classList.add('hidden');
+}
+
+async function handleResetPasswordSubmit(e) {
+  e.preventDefault();
+  const userId = document.getElementById('resetUserId').value;
+  const newPassword = document.getElementById('resetNewPassword').value.trim();
+
+  const res = await apiPost('user.resetPassword', { newPassword }, currentAdminToken, { userId });
+  alert(res.message);
+  if (res.success) {
+    closeResetPasswordModal();
+    loadDataSWR(true);
+  }
+}
+
+async function handleDeleteUser(userId) {
+  if (!confirm('Hapus akun pengguna ini? Pengguna tidak akan dapat login lagi.')) return;
+  const res = await apiPost('user.delete', {}, currentAdminToken, { userId });
+  alert(res.message);
+  if (res.success) {
+    loadDataSWR(true);
   }
 }
 

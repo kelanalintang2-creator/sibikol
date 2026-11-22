@@ -72,11 +72,21 @@
         <button onclick="switchTab('dashboard')" id="nav-dashboard" class="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-indigo-700 shadow transition flex items-center gap-2">
           <i class="fa-solid fa-house"></i> <span class="hidden sm:inline">Portal Sekolah</span>
         </button>
-        <button onclick="switchTab('siswa')" id="nav-siswa" class="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white hover:bg-indigo-800 transition flex items-center gap-2">
-          <i class="fa-solid fa-id-badge"></i> <span class="hidden sm:inline">Portal Siswa</span>
-        </button>
-        <button onclick="handleAdminMenuClick()" id="nav-admin" class="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white hover:bg-indigo-800 transition flex items-center gap-2">
-          <i class="fa-solid fa-lock" id="adminIconLock"></i> <span class="hidden sm:inline">Menu Admin</span>
+
+        <!-- Nav User Profile & Dashboard Shortcut (Tampil saat sudah login) -->
+        <div id="navUserBadge" class="hidden flex items-center gap-1.5 sm:gap-2">
+          <button id="navDashboardUserBtn" onclick="goToUserDashboard()" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-white/20 hover:bg-white/30 transition flex items-center gap-2">
+            <i class="fa-solid fa-circle-user text-amber-300"></i>
+            <span id="navUserDisplayName" class="max-w-[120px] sm:max-w-[180px] truncate">Dashboard</span>
+          </button>
+          <button onclick="logoutAll()" class="p-2 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-bold text-rose-200 hover:text-white hover:bg-rose-600/60 transition flex items-center gap-1" title="Keluar / Logout">
+            <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">Keluar</span>
+          </button>
+        </div>
+
+        <!-- Tombol Login Multi-User (Tampil saat belum login) -->
+        <button onclick="openLoginModal()" id="nav-login-btn" class="px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-amber-400 hover:bg-amber-300 text-slate-900 shadow-md transition flex items-center gap-2">
+          <i class="fa-solid fa-arrow-right-to-bracket text-slate-900"></i> <span>Login</span>
         </button>
       </nav>
     </div>
@@ -114,7 +124,7 @@
       </div>
 
       <!-- Quick Info Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 reveal-on-scroll">
         <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
           <div class="bg-indigo-50 text-indigo-600 p-4 rounded-xl text-2xl"><i class="fa-solid fa-user-graduate"></i></div>
           <div>
@@ -147,13 +157,13 @@
       </div>
 
       <!-- Profil & Sambutan Kepala Sekolah -->
-      <div id="section-profil" class="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-slate-100 grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
-        <div class="lg:col-span-1 text-center bg-slate-50 p-6 rounded-2xl border border-slate-200/60">
+      <div id="section-profil" class="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-slate-100 grid grid-cols-1 lg:grid-cols-3 gap-8 items-center reveal-on-scroll">
+        <div class="lg:col-span-1 text-center bg-slate-50 p-6 rounded-2xl border border-slate-200/60 reveal-left">
           <img id="portalFotoKepsek" src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80" class="w-36 h-36 rounded-full mx-auto mb-4 object-cover shadow-md border-4 border-white" alt="Foto Kepsek">
           <h3 id="portalNamaKepsek" class="text-base font-bold text-slate-800">Kepala Sekolah</h3>
           <p id="portalNamaSekolahSubtitle" class="text-xs text-indigo-600 font-semibold mb-2">SD Negeri Pilangrejo 1</p>
         </div>
-        <div class="lg:col-span-2 space-y-4">
+        <div class="lg:col-span-2 space-y-4 reveal-right">
           <h2 class="text-2xl font-extrabold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-quote-left text-indigo-600"></i> Sambutan Kepala Sekolah</h2>
           <div id="portalSambutan" class="text-slate-600 text-sm leading-relaxed content-html"></div>
           <div class="pt-4 mt-4 border-t border-slate-100 grid grid-cols-1 gap-4">
@@ -172,7 +182,7 @@
       </div>
 
       <!-- Profil Tenaga Pendidik & Kependidikan -->
-      <div class="space-y-4">
+      <div class="space-y-4 reveal-on-scroll">
         <div class="flex justify-between items-center">
           <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-chalkboard-user text-indigo-600"></i> Profil Tenaga Pendidik & Kependidikan</h2>
         </div>
@@ -182,19 +192,19 @@
       </div>
 
       <!-- Berita & Agenda Sekolah -->
-      <div id="section-berita" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div class="lg:col-span-2 space-y-4">
+      <div id="section-berita" class="grid grid-cols-1 lg:grid-cols-3 gap-8 reveal-on-scroll">
+        <div class="lg:col-span-2 space-y-4 reveal-left">
           <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-newspaper text-indigo-600"></i> Berita & Pengumuman Sekolah</h2>
           <div id="publicBeritaContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
         </div>
-        <div class="space-y-4">
+        <div class="space-y-4 reveal-right">
           <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-calendar-days text-indigo-600"></i> Agenda Kegiatan</h2>
           <div id="publicAgendaContainer" class="space-y-3"></div>
         </div>
       </div>
 
       <!-- Galeri Foto Sekolah SLEDING (CAROUSEL) -->
-      <div id="section-galeri" class="space-y-4 pt-4">
+      <div id="section-galeri" class="space-y-4 pt-4 reveal-on-scroll">
         <div class="flex justify-between items-center">
           <div>
             <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-images text-indigo-600"></i> Galeri Foto Sekolah</h2>
@@ -211,14 +221,14 @@
       </div>
 
       <!-- Lokasi Maps & Kontak Kami -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-6 border-t border-slate-200">
-        <div class="lg:col-span-2 space-y-3">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-6 border-t border-slate-200 reveal-on-scroll">
+        <div class="lg:col-span-2 space-y-3 reveal-left">
           <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-map-location-dot text-indigo-600"></i> Lokasi Sekolah (Google Maps)</h2>
           <div class="w-full rounded-2xl overflow-hidden shadow-sm border border-slate-200 h-80 bg-slate-100">
             <iframe id="portalMapsIframe" src="" class="w-full h-full border-0" allowfullscreen="" loading="lazy"></iframe>
           </div>
         </div>
-        <div class="space-y-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+        <div class="space-y-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between reveal-right">
           <div class="space-y-4">
             <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-address-book text-indigo-600"></i> Kontak Kami</h2>
             <div class="space-y-3 text-xs sm:text-sm text-slate-600">
@@ -240,35 +250,84 @@
 
     </section>
 
-    <!-- ADMIN PANEL TAB -->
-    <section id="tab-admin" class="hidden space-y-6">
-      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div>
-          <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-emerald-600"></i> Panel Administrator & Analitik (SPILSA PRO)</h2>
-          <p class="text-sm text-slate-500">Kelola master data sekolah, rekapitulasi presensi, kartu digital, WhatsApp Gateway, dan migrasi database.</p>
-        </div>
-        <button onclick="adminLogout()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 shrink-0">
-          <i class="fa-solid fa-right-from-bracket"></i> Keluar Admin
-        </button>
-      </div>
+    <!-- ADMIN PANEL TAB (DENGAN LEFT SIDEBAR NAVIGATION SESUAI POIN 10) -->
+    <section id="tab-admin" class="hidden">
+      <div class="flex flex-col lg:flex-row gap-6 items-start">
+        
+        <!-- SIDEBAR KIRI ADMIN -->
+        <aside id="adminSidebar" class="w-full lg:w-64 shrink-0 rounded-3xl shadow-xl overflow-hidden text-white p-4 space-y-4 bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-950 border border-white/10 sticky top-20">
+          <div class="flex items-center gap-3 p-2 border-b border-white/10 pb-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-lg font-bold shadow-md shrink-0">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div class="overflow-hidden">
+              <h4 class="font-extrabold text-xs sm:text-sm text-white truncate">Admin Panel</h4>
+              <span class="text-[10px] text-indigo-300 block">SDN Pilangrejo 1</span>
+            </div>
+          </div>
 
-      <!-- Submenu Admin Main Navigation (Lengkap dengan WA CRM & Migrasi) -->
-      <div class="flex space-x-2 border-b pb-2 overflow-x-auto hide-scrollbar">
-        <button onclick="switchAdminSub('dashboard')" id="subnav-dashboard" class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-chart-pie"></i> Dashboard & Cari</button>
-        <button onclick="switchAdminSub('presensi-siswa')" id="subnav-presensi-siswa" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-clipboard-check"></i> Presensi Siswa</button>
-        <button onclick="switchAdminSub('presensi-guru')" id="subnav-presensi-guru" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-user-check"></i> Presensi Guru</button>
-        <button onclick="switchAdminSub('web')" id="subnav-web" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-globe"></i> Menu Web Sekolah</button>
-        <button onclick="switchAdminSub('siswa')" id="subnav-siswa" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-user-graduate"></i> Siswa</button>
-        <button onclick="switchAdminSub('guru')" id="subnav-guru" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-chalkboard-user"></i> Guru</button>
-        <button onclick="switchAdminSub('kelas')" id="subnav-kelas" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-school"></i> Kelas</button>
-        <button onclick="switchAdminSub('prestasi')" id="subnav-prestasi" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-trophy"></i> Prestasi</button>
-        <button onclick="switchAdminSub('konseling')" id="subnav-konseling" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-hands-holding-child"></i> Konseling</button>
-        <button onclick="switchAdminSub('catatan')" id="subnav-catatan" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-clipboard-user"></i> Pelanggaran</button>
-        <button onclick="switchAdminSub('jenis')" id="subnav-jenis" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-list-check"></i> Jenis Pelanggaran</button>
-        <button onclick="switchAdminSub('wa')" id="subnav-wa" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-brands fa-whatsapp text-emerald-600"></i> WhatsApp CRM</button>
-        <button onclick="switchAdminSub('migrasi')" id="subnav-migrasi" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-database text-purple-600"></i> Migrasi DB</button>
-        <button onclick="switchAdminSub('password')" id="subnav-password" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0"><i class="fa-solid fa-key"></i> Password</button>
-      </div>
+          <!-- Navigasi Menu Sidebar Admin Kiri -->
+          <nav class="space-y-1 text-xs font-semibold max-h-[70vh] overflow-y-auto hide-scrollbar">
+            <button onclick="switchAdminSub('dashboard')" id="subnav-dashboard" class="w-full px-3 py-2.5 rounded-xl bg-indigo-600 text-white transition flex items-center gap-2.5 text-left shadow-sm">
+              <i class="fa-solid fa-chart-pie w-4 text-center"></i> <span>Dashboard & Cari</span>
+            </button>
+            <button onclick="switchAdminSub('presensi-siswa')" id="subnav-presensi-siswa" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+              <i class="fa-solid fa-clipboard-check w-4 text-center text-pink-400"></i> <span>Presensi Siswa</span>
+            </button>
+            <button onclick="switchAdminSub('presensi-guru')" id="subnav-presensi-guru" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+              <i class="fa-solid fa-user-check w-4 text-center text-teal-400"></i> <span>Presensi Guru</span>
+            </button>
+            <button onclick="switchAdminSub('approval-izin')" id="subnav-approval-izin" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+              <i class="fa-solid fa-envelope-open-text w-4 text-center text-amber-400"></i> <span>Approval Izin</span>
+              <span id="badgePendingIzin" class="ml-auto bg-amber-500 text-slate-950 font-extrabold px-1.5 py-0.5 rounded-full text-[10px] hidden">0</span>
+            </button>
+            <button onclick="switchAdminSub('siswa')" id="subnav-siswa" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+              <i class="fa-solid fa-user-graduate w-4 text-center text-indigo-400"></i> <span>Data Siswa</span>
+            </button>
+            <button onclick="switchAdminSub('guru')" id="subnav-guru" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+              <i class="fa-solid fa-chalkboard-user w-4 text-center text-emerald-400"></i> <span>Data Guru</span>
+            </button>
+            <button onclick="switchAdminSub('kelas')" id="subnav-kelas" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+              <i class="fa-solid fa-school w-4 text-center text-blue-400"></i> <span>Data Kelas</span>
+            </button>
+            <button onclick="switchAdminSub('prestasi')" id="subnav-prestasi" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+              <i class="fa-solid fa-trophy w-4 text-center text-amber-400"></i> <span>Prestasi Siswa</span>
+            </button>
+            <button onclick="switchAdminSub('catatan')" id="subnav-catatan" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+              <i class="fa-solid fa-clipboard-user w-4 text-center text-rose-400"></i> <span>Pelanggaran</span>
+            </button>
+            <button onclick="switchAdminSub('jenis')" id="subnav-jenis" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+              <i class="fa-solid fa-list-check w-4 text-center text-purple-400"></i> <span>Jenis Pelanggaran</span>
+            </button>
+            <button onclick="switchAdminSub('konseling')" id="subnav-konseling" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+              <i class="fa-solid fa-hands-holding-child w-4 text-center text-sky-400"></i> <span>Layanan Konseling</span>
+            </button>
+            <button onclick="switchAdminSub('users')" id="subnav-users" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+              <i class="fa-solid fa-users-gear w-4 text-center text-cyan-400"></i> <span>User Management</span>
+            </button>
+            <button onclick="switchAdminSub('pengaturan')" id="subnav-pengaturan" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+              <i class="fa-solid fa-sliders w-4 text-center text-orange-400"></i> <span>Pengaturan Sistem</span>
+            </button>
+            <button onclick="switchAdminSub('web')" id="subnav-web" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+              <i class="fa-solid fa-globe w-4 text-center text-teal-400"></i> <span>Web Sekolah & CMS</span>
+            </button>
+            <button onclick="switchAdminSub('wa')" id="subnav-wa" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+              <i class="fa-brands fa-whatsapp w-4 text-center text-emerald-400"></i> <span>WhatsApp Gateway</span>
+            </button>
+            <button onclick="switchAdminSub('migrasi')" id="subnav-migrasi" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+              <i class="fa-solid fa-database w-4 text-center text-violet-400"></i> <span>Migrasi Database</span>
+            </button>
+          </nav>
+
+          <div class="border-t border-white/10 pt-2">
+            <button onclick="adminLogout()" class="w-full px-3 py-2 rounded-xl text-rose-300 hover:text-white hover:bg-rose-600/30 transition flex items-center gap-2 text-xs font-semibold">
+              <i class="fa-solid fa-right-from-bracket w-4 text-center"></i> <span>Keluar Admin</span>
+            </button>
+          </div>
+        </aside>
+
+        <!-- KONTEN UTAMA SUBMENU ADMIN (SEBELAH KANAN SIDEBAR) -->
+        <div class="flex-grow w-full space-y-6">
 
       <!-- 0. SUBMENU DASHBOARD ADMIN -->
       <div id="admin-sub-dashboard" class="space-y-6">
@@ -328,6 +387,9 @@
             <p class="text-indigo-200 text-xs sm:text-sm mt-1">Gunakan 3 opsi input cepat: Scan Barcode Kartu Pelajar, Scan Wajah Kamera, atau Input Manual.</p>
           </div>
           <div class="flex flex-wrap gap-2">
+            <button onclick="openRekamWajahModal('siswa')" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow flex items-center gap-2 transition">
+              <i class="fa-solid fa-face-smile text-base"></i> Rekam Wajah
+            </button>
             <button onclick="togglePresensiSiswaInputMode('barcode')" id="btnModeSiswaBarcode" class="bg-pink-600 hover:bg-pink-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow flex items-center gap-2 transition">
               <i class="fa-solid fa-qrcode text-base"></i> Scan Barcode
             </button>
@@ -364,10 +426,10 @@
             </div>
             <div class="flex items-center gap-2 w-full max-w-md">
               <select id="selectSiswaWajah" class="flex-grow p-2.5 border rounded-xl text-xs bg-white font-medium focus:ring-2 focus:ring-indigo-300">
-                <option value="">-- Pilih Nama / NISN Siswa Terlebih Dahulu --</option>
+                <option value="">-- Deteksi Wajah Otomatis / Pilih Siswa --</option>
               </select>
               <button onclick="capturePresensiSiswaWajah()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow flex items-center gap-1.5 shrink-0">
-                <i class="fa-solid fa-camera"></i> Ambil & Absen
+                <i class="fa-solid fa-camera"></i> Absen Wajah
               </button>
             </div>
           </div>
@@ -375,32 +437,42 @@
           <div id="presensiSiswaScanAlert" class="hidden p-3 rounded-xl text-xs font-semibold text-center transition"></div>
         </div>
 
-        <!-- KPI Kehadiran Siswa -->
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          <div class="bg-white p-4 rounded-2xl border shadow-sm">
-            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Persentase Hadir</div>
-            <div id="kpiSiswaPersen" class="text-2xl font-extrabold text-indigo-600 mt-1">0%</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">Bulan Terpilih</div>
+        <!-- KPI Kehadiran Siswa (Lengkap dengan Terlambat & Pulang Cepat) -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Persentase</div>
+            <div id="kpiSiswaPersen" class="text-2xl font-black text-indigo-600 mt-0.5">0%</div>
+            <div class="text-[10px] text-slate-400">Kehadiran</div>
           </div>
-          <div class="bg-white p-4 rounded-2xl border shadow-sm">
-            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Total Hadir</div>
-            <div id="kpiSiswaHadir" class="text-2xl font-extrabold text-emerald-600 mt-1">0</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">Siswa</div>
+          <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Hadir</div>
+            <div id="kpiSiswaHadir" class="text-2xl font-black text-emerald-600 mt-0.5">0</div>
+            <div class="text-[10px] text-slate-400">Tepat Waktu</div>
           </div>
-          <div class="bg-white p-4 rounded-2xl border shadow-sm">
-            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Sakit</div>
-            <div id="kpiSiswaSakit" class="text-2xl font-extrabold text-amber-500 mt-1">0</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">Siswa</div>
+          <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Terlambat</div>
+            <div id="kpiSiswaTerlambat" class="text-2xl font-black text-amber-500 mt-0.5">0</div>
+            <div class="text-[10px] text-slate-400">Siswa</div>
           </div>
-          <div class="bg-white p-4 rounded-2xl border shadow-sm">
-            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Izin</div>
-            <div id="kpiSiswaIzin" class="text-2xl font-extrabold text-blue-500 mt-1">0</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">Siswa</div>
+          <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Pulang Cepat</div>
+            <div id="kpiSiswaPulangCepat" class="text-2xl font-black text-orange-500 mt-0.5">0</div>
+            <div class="text-[10px] text-slate-400">Siswa</div>
           </div>
-          <div class="bg-white p-4 rounded-2xl border shadow-sm col-span-2 sm:col-span-1">
-            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Alpa / Tanpa Ket.</div>
-            <div id="kpiSiswaAlpa" class="text-2xl font-extrabold text-rose-600 mt-1">0</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">Siswa</div>
+          <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Sakit</div>
+            <div id="kpiSiswaSakit" class="text-2xl font-black text-cyan-600 mt-0.5">0</div>
+            <div class="text-[10px] text-slate-400">Siswa</div>
+          </div>
+          <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Izin</div>
+            <div id="kpiSiswaIzin" class="text-2xl font-black text-blue-600 mt-0.5">0</div>
+            <div class="text-[10px] text-slate-400">Siswa</div>
+          </div>
+          <div class="bg-white p-3.5 rounded-2xl border shadow-sm col-span-2 sm:col-span-1">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Alpa</div>
+            <div id="kpiSiswaAlpa" class="text-2xl font-black text-rose-600 mt-0.5">0</div>
+            <div class="text-[10px] text-slate-400">Tanpa Keterangan</div>
           </div>
         </div>
 
@@ -415,6 +487,8 @@
             <select id="filterPresensiSiswaStatus" onchange="renderPresensiSiswaTable()" class="text-xs p-2 border rounded-lg bg-white">
               <option value="">Semua Status</option>
               <option value="Hadir">Hadir</option>
+              <option value="Terlambat">Terlambat</option>
+              <option value="Pulang Cepat">Pulang Cepat</option>
               <option value="Sakit">Sakit</option>
               <option value="Izin">Izin</option>
               <option value="Alpa">Alpa</option>
@@ -459,6 +533,9 @@
             <p class="text-teal-200 text-xs sm:text-sm mt-1">Presensi dewan guru dengan 3 opsi: Scan Barcode ID Card, Scan Wajah Kamera, atau Input Manual.</p>
           </div>
           <div class="flex flex-wrap gap-2">
+            <button onclick="openRekamWajahModal('guru')" class="bg-teal-700 hover:bg-teal-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow flex items-center gap-2 transition">
+              <i class="fa-solid fa-face-smile text-base"></i> Rekam Wajah
+            </button>
             <button onclick="togglePresensiGuruInputMode('barcode')" id="btnModeGuruBarcode" class="bg-teal-500 hover:bg-teal-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow flex items-center gap-2 transition">
               <i class="fa-solid fa-qrcode text-base"></i> Scan Barcode
             </button>
@@ -493,10 +570,10 @@
             </div>
             <div class="flex items-center gap-2 w-full max-w-md">
               <select id="selectGuruWajah" class="flex-grow p-2.5 border rounded-xl text-xs bg-white font-medium focus:ring-2 focus:ring-teal-300">
-                <option value="">-- Pilih Guru Terlebih Dahulu --</option>
+                <option value="">-- Deteksi Wajah Otomatis / Pilih Guru --</option>
               </select>
               <button onclick="capturePresensiGuruWajah()" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow flex items-center gap-1.5 shrink-0">
-                <i class="fa-solid fa-camera"></i> Ambil & Absen
+                <i class="fa-solid fa-camera"></i> Absen Wajah
               </button>
             </div>
           </div>
@@ -504,32 +581,42 @@
           <div id="presensiGuruScanAlert" class="hidden p-3 rounded-xl text-xs font-semibold text-center transition"></div>
         </div>
 
-        <!-- KPI Kehadiran Guru -->
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          <div class="bg-white p-4 rounded-2xl border shadow-sm">
-            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Persentase Hadir</div>
-            <div id="kpiGuruPersen" class="text-2xl font-extrabold text-teal-600 mt-1">0%</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">Bulan Terpilih</div>
+        <!-- KPI Kehadiran Guru (Lengkap dengan Terlambat & Pulang Cepat) -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Persentase</div>
+            <div id="kpiGuruPersen" class="text-2xl font-black text-teal-600 mt-0.5">0%</div>
+            <div class="text-[10px] text-slate-400">Kehadiran</div>
           </div>
-          <div class="bg-white p-4 rounded-2xl border shadow-sm">
-            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Total Hadir</div>
-            <div id="kpiGuruHadir" class="text-2xl font-extrabold text-emerald-600 mt-1">0</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">Guru/Staf</div>
+          <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Hadir</div>
+            <div id="kpiGuruHadir" class="text-2xl font-black text-emerald-600 mt-0.5">0</div>
+            <div class="text-[10px] text-slate-400">Tepat Waktu</div>
           </div>
-          <div class="bg-white p-4 rounded-2xl border shadow-sm">
-            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Sakit</div>
-            <div id="kpiGuruSakit" class="text-2xl font-extrabold text-amber-500 mt-1">0</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">Guru/Staf</div>
+          <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Terlambat</div>
+            <div id="kpiGuruTerlambat" class="text-2xl font-black text-amber-500 mt-0.5">0</div>
+            <div class="text-[10px] text-slate-400">Guru/Staf</div>
           </div>
-          <div class="bg-white p-4 rounded-2xl border shadow-sm">
-            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Izin</div>
-            <div id="kpiGuruIzin" class="text-2xl font-extrabold text-blue-500 mt-1">0</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">Guru/Staf</div>
+          <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Pulang Cepat</div>
+            <div id="kpiGuruPulangCepat" class="text-2xl font-black text-orange-500 mt-0.5">0</div>
+            <div class="text-[10px] text-slate-400">Guru/Staf</div>
           </div>
-          <div class="bg-white p-4 rounded-2xl border shadow-sm col-span-2 sm:col-span-1">
-            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Alpa / Tanpa Ket.</div>
-            <div id="kpiGuruAlpa" class="text-2xl font-extrabold text-rose-600 mt-1">0</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">Guru/Staf</div>
+          <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Sakit</div>
+            <div id="kpiGuruSakit" class="text-2xl font-black text-cyan-600 mt-0.5">0</div>
+            <div class="text-[10px] text-slate-400">Guru/Staf</div>
+          </div>
+          <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Izin</div>
+            <div id="kpiGuruIzin" class="text-2xl font-black text-blue-600 mt-0.5">0</div>
+            <div class="text-[10px] text-slate-400">Guru/Staf</div>
+          </div>
+          <div class="bg-white p-3.5 rounded-2xl border shadow-sm col-span-2 sm:col-span-1">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Alpa</div>
+            <div id="kpiGuruAlpa" class="text-2xl font-black text-rose-600 mt-0.5">0</div>
+            <div class="text-[10px] text-slate-400">Tanpa Keterangan</div>
           </div>
         </div>
 
@@ -541,6 +628,8 @@
             <select id="filterPresensiGuruStatus" onchange="renderPresensiGuruTable()" class="text-xs p-2 border rounded-lg bg-white">
               <option value="">Semua Status</option>
               <option value="Hadir">Hadir</option>
+              <option value="Terlambat">Terlambat</option>
+              <option value="Pulang Cepat">Pulang Cepat</option>
               <option value="Sakit">Sakit</option>
               <option value="Izin">Izin</option>
               <option value="Alpa">Alpa</option>
@@ -1114,29 +1203,485 @@
         </div>
       </div>
 
-      <!-- 11. SUBMENU PENGATURAN PASSWORD -->
-      <div id="admin-sub-password" class="hidden space-y-4">
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 max-w-lg mx-auto mt-8">
-          <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-key text-indigo-600"></i> Pengaturan Password Admin</h3>
-          <form onsubmit="handlePasswordUpdate(event)" class="space-y-4">
-            <div>
-              <label class="block text-sm font-semibold text-slate-700 mb-1">Password Lama</label>
-              <input type="password" id="oldPassword" required class="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div>
-              <label class="block text-sm font-semibold text-slate-700 mb-1">Password Baru</label>
-              <input type="password" id="newPassword" required minlength="6" class="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div>
-              <label class="block text-sm font-semibold text-slate-700 mb-1">Konfirmasi Password Baru</label>
-              <input type="password" id="confirmPassword" required minlength="6" class="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div id="passwordErrorMsg" class="text-rose-500 text-xs hidden"></div>
-            <div class="pt-2">
-              <button type="submit" id="btnUpdatePassword" class="w-full py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow hover:bg-indigo-700 transition">Simpan Password Baru</button>
-            </div>
-          </form>
+      <!-- SUBMENU APPROVAL IZIN (POIN 8) -->
+      <div id="admin-sub-approval-izin" class="hidden space-y-6">
+        <div class="bg-gradient-to-r from-amber-600 to-orange-700 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <span class="bg-amber-400/30 text-amber-100 border border-amber-300/40 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Approval Center</span>
+            <h3 class="text-xl sm:text-2xl font-extrabold mt-1">Approval Pengajuan Izin Siswa & Guru</h3>
+            <p class="text-amber-100 text-xs sm:text-sm mt-1">Verifikasi pengajuan izin online. Izin yang disetujui akan otomatis tersinkronisasi ke laporan presensi.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="renderApprovalIzinTable()" class="bg-white text-amber-800 font-bold px-4 py-2.5 rounded-xl text-xs shadow hover:bg-amber-50 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-rotate"></i> Muat Ulang
+            </button>
+          </div>
         </div>
+
+        <!-- KPI Izin -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bg-white p-4 rounded-2xl border shadow-sm flex items-center space-x-4">
+            <div class="bg-amber-50 text-amber-600 p-3.5 rounded-xl text-2xl"><i class="fa-solid fa-hourglass-half"></i></div>
+            <div>
+              <div id="kpiIzinPending" class="text-2xl font-black text-amber-600">0</div>
+              <div class="text-xs text-slate-500 font-medium">Menunggu Approval</div>
+            </div>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border shadow-sm flex items-center space-x-4">
+            <div class="bg-emerald-50 text-emerald-600 p-3.5 rounded-xl text-2xl"><i class="fa-solid fa-circle-check"></i></div>
+            <div>
+              <div id="kpiIzinDisetujui" class="text-2xl font-black text-emerald-600">0</div>
+              <div class="text-xs text-slate-500 font-medium">Telah Disetujui</div>
+            </div>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border shadow-sm flex items-center space-x-4">
+            <div class="bg-rose-50 text-rose-600 p-3.5 rounded-xl text-2xl"><i class="fa-solid fa-circle-xmark"></i></div>
+            <div>
+              <div id="kpiIzinDitolak" class="text-2xl font-black text-rose-600">0</div>
+              <div class="text-xs text-slate-500 font-medium">Ditolak</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Izin -->
+        <div class="flex flex-wrap gap-2 items-center bg-white p-4 rounded-xl border">
+          <select id="filterIzinRole" onchange="renderApprovalIzinTable()" class="text-xs p-2 border rounded-lg bg-white">
+            <option value="">Semua Peran (Siswa & Guru)</option>
+            <option value="siswa">Siswa</option>
+            <option value="guru">Guru / Staf</option>
+          </select>
+          <select id="filterIzinStatus" onchange="renderApprovalIzinTable()" class="text-xs p-2 border rounded-lg bg-white">
+            <option value="">Semua Status</option>
+            <option value="Pending" selected>Pending (Menunggu)</option>
+            <option value="Disetujui">Disetujui</option>
+            <option value="Ditolak">Ditolak</option>
+          </select>
+        </div>
+
+        <!-- Tabel Approval Izin -->
+        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 uppercase">
+                <th class="p-3">No</th>
+                <th class="p-3">Pemohon</th>
+                <th class="p-3">Role / Kelas</th>
+                <th class="p-3">Rentang Tanggal</th>
+                <th class="p-3">Jenis Izin</th>
+                <th class="p-3">Alasan</th>
+                <th class="p-3 text-center">Bukti / Surat</th>
+                <th class="p-3 text-center">Status</th>
+                <th class="p-3 text-center">Aksi Tindakan</th>
+              </tr>
+            </thead>
+            <tbody id="approvalIzinTableBody" class="divide-y divide-slate-100"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- SUBMENU USER MANAGEMENT (POIN 12) -->
+      <div id="admin-sub-users" class="hidden space-y-6">
+        <div class="bg-gradient-to-r from-cyan-800 to-blue-900 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <span class="bg-cyan-400/30 text-cyan-100 border border-cyan-300/40 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Akses & Keamanan</span>
+            <h3 class="text-xl sm:text-2xl font-extrabold mt-1">User Management & Multi-User Access</h3>
+            <p class="text-cyan-100 text-xs sm:text-sm mt-1">Kelola akun dan atur hak akses untuk Administrator, Dewan Guru, dan Siswa.</p>
+          </div>
+          <button onclick="openUserModal()" class="bg-white text-cyan-900 font-bold px-4 py-2.5 rounded-xl text-xs shadow hover:bg-cyan-50 transition flex items-center gap-2">
+            <i class="fa-solid fa-user-plus"></i> Tambah User Baru
+          </button>
+        </div>
+
+        <!-- Filter & Search User -->
+        <div class="flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-xl border gap-3">
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <select id="filterUserRole" onchange="renderUsersTable()" class="text-xs p-2 border rounded-lg bg-white">
+              <option value="">Semua Role</option>
+              <option value="admin">Administrator</option>
+              <option value="guru">Dewan Guru</option>
+              <option value="siswa">Siswa</option>
+            </select>
+            <input type="text" id="searchUserInput" oninput="renderUsersTable()" placeholder="Cari nama / username..." class="p-2 text-xs border rounded-lg w-full sm:w-60">
+          </div>
+        </div>
+
+        <!-- Tabel Users -->
+        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 uppercase">
+                <th class="p-3">No</th>
+                <th class="p-3">Username</th>
+                <th class="p-3">Nama Lengkap</th>
+                <th class="p-3">Role</th>
+                <th class="p-3">Identitas (NISN/NIP)</th>
+                <th class="p-3 text-center">Status</th>
+                <th class="p-3">Terakhir Login</th>
+                <th class="p-3 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody" class="divide-y divide-slate-100"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- SUBMENU PENGATURAN SISTEM (POIN 9) -->
+      <div id="admin-sub-pengaturan" class="hidden space-y-6">
+        <div class="bg-gradient-to-r from-orange-600 via-amber-600 to-rose-700 rounded-2xl p-6 text-white shadow-lg">
+          <span class="bg-white/20 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Konfigurasi Sekolah</span>
+          <h3 class="text-xl sm:text-2xl font-extrabold mt-1">Pengaturan Sistem & Ganti Tahun Pelajaran</h3>
+          <p class="text-orange-100 text-xs sm:text-sm mt-1">Sesuaikan tahun pelajaran, kenaikan kelas otomatis, jam presensi sekolah, serta tema warna aplikasi.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Card 1: Ganti Tahun Pelajaran & Jam Presensi -->
+          <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+            <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2 border-b pb-3">
+              <i class="fa-solid fa-calendar-days text-orange-600"></i> Tahun Pelajaran & Jam Presensi
+            </h4>
+            <form onsubmit="handleSavePengaturan(event)" class="space-y-4 text-xs sm:text-sm">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-semibold mb-1">Tahun Pelajaran</label>
+                  <input type="text" id="settingTahunPelajaran" required placeholder="Contoh: 2025/2026" class="w-full p-2.5 border rounded-xl">
+                </div>
+                <div>
+                  <label class="block font-semibold mb-1">Semester</label>
+                  <select id="settingSemester" class="w-full p-2.5 border rounded-xl bg-white">
+                    <option value="Ganjil">Ganjil</option>
+                    <option value="Genap">Genap</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-semibold mb-1">Batas Jam Masuk (Tepat Waktu)</label>
+                  <input type="time" id="settingJamBerangkat" required class="w-full p-2.5 border rounded-xl">
+                  <span class="text-[10px] text-slate-400 mt-0.5 block">Lewat dari jam ini otomatis dihitung <b>Terlambat</b>.</span>
+                </div>
+                <div>
+                  <label class="block font-semibold mb-1">Jam Kepulangan Normal</label>
+                  <input type="time" id="settingJamPulang" required class="w-full p-2.5 border rounded-xl">
+                  <span class="text-[10px] text-slate-400 mt-0.5 block">Absen sebelum jam ini dihitung <b>Pulang Cepat</b>.</span>
+                </div>
+              </div>
+
+              <div class="pt-2 flex justify-end">
+                <button type="submit" id="btnSavePengaturan" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow transition">
+                  <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan Pengaturan
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Card 2: Fitur Naik Kelas Ketika Ganti Tahun Pelajaran -->
+          <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4 flex flex-col justify-between">
+            <div>
+              <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2 border-b pb-3 text-purple-700">
+                <i class="fa-solid fa-arrow-trend-up"></i> Fitur Naik Kelas Otomatis
+              </h4>
+              <p class="text-xs text-slate-600 mt-2 leading-relaxed">
+                Jalankan kenaikan kelas massal saat pergantian tahun pelajaran. Sistem akan otomatis memajukan jenjang rombel seluruh siswa:
+              </p>
+              <div class="bg-purple-50 p-3.5 rounded-xl text-xs text-purple-900 space-y-1.5 border border-purple-100 mt-3 font-medium">
+                <div>• Siswa <b>Kelas 6</b> &rarr; Status <b>Lulus / Alumni</b></div>
+                <div>• Siswa <b>Kelas 5</b> &rarr; Naik ke <b>Kelas 6</b></div>
+                <div>• Siswa <b>Kelas 4</b> &rarr; Naik ke <b>Kelas 5</b></div>
+                <div>• Siswa <b>Kelas 3</b> &rarr; Naik ke <b>Kelas 4</b></div>
+                <div>• Siswa <b>Kelas 2</b> &rarr; Naik ke <b>Kelas 3</b></div>
+                <div>• Siswa <b>Kelas 1</b> &rarr; Naik ke <b>Kelas 2</b></div>
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <button onclick="handleProsesNaikKelas()" id="btnProsesNaikKelas" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-extrabold py-3 px-4 rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-graduation-cap text-base"></i> Proses Naik Kelas Massal
+              </button>
+            </div>
+          </div>
+
+          <!-- Card 3: Pengaturan Gradasi Warna Header, Sidebar, dan Footer -->
+          <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4 lg:col-span-2">
+            <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2 border-b pb-3">
+              <i class="fa-solid fa-palette text-indigo-600"></i> Pengaturan Gradasi Warna Tema (Header, Sidebar & Footer)
+            </h4>
+            <p class="text-xs text-slate-500">Pilih tema warna gradasi modern untuk menyesuaikan tampilan Header, Sidebar Admin, dan Footer portal secara langsung.</p>
+
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
+              <button type="button" onclick="applyThemePreset('royal')" class="p-3 rounded-xl border text-center hover:shadow-md transition bg-gradient-to-r from-indigo-700 to-purple-800 text-white font-bold text-xs">
+                Royal Indigo
+              </button>
+              <button type="button" onclick="applyThemePreset('emerald')" class="p-3 rounded-xl border text-center hover:shadow-md transition bg-gradient-to-r from-emerald-700 to-teal-900 text-white font-bold text-xs">
+                Emerald Forest
+              </button>
+              <button type="button" onclick="applyThemePreset('midnight')" class="p-3 rounded-xl border text-center hover:shadow-md transition bg-gradient-to-r from-slate-900 to-zinc-900 text-white font-bold text-xs">
+                Midnight Black
+              </button>
+              <button type="button" onclick="applyThemePreset('oceanic')" class="p-3 rounded-xl border text-center hover:shadow-md transition bg-gradient-to-r from-blue-700 to-cyan-800 text-white font-bold text-xs">
+                Oceanic Blue
+              </button>
+              <button type="button" onclick="applyThemePreset('crimson')" class="p-3 rounded-xl border text-center hover:shadow-md transition bg-gradient-to-r from-rose-700 to-amber-700 text-white font-bold text-xs">
+                Sunset Crimson
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+        </div><!-- Tutup Konten Utama Submenu Admin Kanan -->
+      </div><!-- Tutup Flex Sidebar Wrapper -->
+    </section>
+
+    <!-- ========================================== -->
+    <!-- PORTAL GURU & WALI KELAS (POIN 7)          -->
+    <!-- ========================================== -->
+    <section id="tab-guru" class="hidden space-y-6">
+      <div id="guruDashboardContainer" class="space-y-6">
+        
+        <!-- Header Info Guru -->
+        <div class="bg-gradient-to-r from-teal-900 via-emerald-900 to-slate-900 rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row justify-between items-center gap-6">
+          <div class="flex items-center gap-4">
+            <img id="portalGuruAvatar" src="https://cdn-icons-png.flaticon.com/512/3135/3135768.png" class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-teal-400 object-cover bg-white shadow-md" alt="Foto Guru">
+            <div>
+              <div class="flex items-center gap-2">
+                <span id="portalGuruJabatan" class="bg-teal-500/40 text-teal-200 border border-teal-400/50 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase">Dewan Guru</span>
+                <span id="portalGuruWaliBadge" class="hidden bg-amber-500/40 text-amber-200 border border-amber-400/50 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">Wali Kelas</span>
+              </div>
+              <h2 id="portalGuruNama" class="text-lg sm:text-2xl font-extrabold mt-1">Nama Guru</h2>
+              <div class="text-xs text-teal-200 flex flex-wrap gap-x-4 gap-y-1 mt-0.5">
+                <span>NIP: <b id="portalGuruNip">-</b></span>
+                <span>Pendidikan: <b id="portalGuruPendidikan">-</b></span>
+                <span id="portalGuruWaliKet" class="hidden">Wali Kelas: <b id="portalGuruWaliKelasNama">-</b></span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="previewMyTeacherCard()" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl text-xs border border-white/20 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-id-card"></i> Lihat Kartu Guru
+            </button>
+            <button onclick="logoutAll()" class="bg-rose-500/80 hover:bg-rose-600 text-white font-semibold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i> Keluar
+            </button>
+          </div>
+        </div>
+
+        <!-- Menu Tabs Guru -->
+        <div class="flex space-x-2 border-b pb-2 overflow-x-auto hide-scrollbar">
+          <button onclick="switchGuruPortalTab('absen')" id="guruTabBtn-absen" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-teal-600 text-white transition flex items-center gap-2 shrink-0">
+            <i class="fa-solid fa-camera"></i> Absen Wajah Mandiri
+          </button>
+          <button onclick="switchGuruPortalTab('kehadiran')" id="guruTabBtn-kehadiran" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0">
+            <i class="fa-solid fa-clipboard-check"></i> Rekap Kehadiran Saya
+          </button>
+          <button onclick="switchGuruPortalTab('izin')" id="guruTabBtn-izin" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0">
+            <i class="fa-solid fa-envelope-open-text"></i> Ajukan Izin
+          </button>
+          <button onclick="switchGuruPortalTab('walikelas')" id="guruTabBtn-walikelas" class="hidden px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 transition flex items-center gap-2 shrink-0">
+            <i class="fa-solid fa-users-viewfinder"></i> Rekap Kehadiran Siswa Binaan
+          </button>
+        </div>
+
+        <!-- TAB 1: ABSEN SCAN WAJAH MANDIRI GURU (DENGAN GEOLOCATION GEOFENCING) -->
+        <div id="guruPortal-absen" class="space-y-6">
+          <div class="bg-white rounded-3xl p-6 sm:p-8 border shadow-sm max-w-xl mx-auto space-y-5 text-center">
+            <div>
+              <h3 class="text-base sm:text-lg font-bold text-slate-800">Presensi Guru & Tenaga Kependidikan</h3>
+              <p class="text-xs text-slate-500 mt-1">Presensi wajah mandiri dengan validasi batasan lokasi (GPS) radius lingkungan sekolah.</p>
+            </div>
+
+            <!-- Kamera Live & Frame Wajah -->
+            <div class="relative w-full aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-inner mx-auto">
+              <video id="guruSelfieVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+              <canvas id="guruSelfieCanvas" class="hidden"></canvas>
+              
+              <!-- Frame Oval Wajah -->
+              <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div class="w-44 h-56 border-2 border-dashed border-teal-400 rounded-full shadow-lg"></div>
+              </div>
+
+              <!-- Loading Spinner -->
+              <div id="cameraLoadingSpinnerGuru" class="absolute inset-0 bg-slate-900/80 flex items-center justify-center text-white text-xs font-semibold gap-2 hidden">
+                <i class="fa-solid fa-spinner fa-spin text-lg"></i> Mengaktifkan kamera...
+              </div>
+            </div>
+
+            <!-- Geolocation Status Card -->
+            <div id="guruGeoStatusCard" class="bg-slate-50 p-4 rounded-2xl border text-xs text-left space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-700 flex items-center gap-1.5"><i class="fa-solid fa-location-crosshairs text-teal-600"></i> Validasi Titik Lokasi Sekolah</span>
+                <span id="guruGeoStatusBadge" class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-[10px] font-bold">Mengecek GPS...</span>
+              </div>
+              <p id="guruGeoDistanceText" class="text-slate-600 text-xs">Mendeteksi koordinat lokasi terkini perangkat Anda...</p>
+            </div>
+
+            <!-- Tombol Absen Mandiri Guru -->
+            <div>
+              <button onclick="submitGuruSelfPresensi()" id="btnSubmitGuruSelfPresensi" disabled class="w-full py-3 bg-teal-600 disabled:bg-slate-300 text-white font-bold rounded-xl text-xs sm:text-sm shadow-lg hover:bg-teal-700 transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-camera"></i> Ambil Foto Wajah & Absen Sekarang
+              </button>
+              <p id="guruSelfPresensiTip" class="text-[11px] text-slate-400 mt-2">Tombol akan aktif otomatis saat posisi GPS Anda berada di radius sekolah.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: REKAP KEHADIRAN SAYA (GURU) -->
+        <div id="guruPortal-kehadiran" class="hidden space-y-6">
+          <div class="grid grid-cols-2 sm:grid-cols-6 gap-3">
+            <div class="bg-white p-4 rounded-2xl border shadow-sm">
+              <span class="text-xs text-slate-400 font-semibold">Persentase</span>
+              <div id="myGuruPersen" class="text-2xl font-black text-teal-600 mt-1">0%</div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border shadow-sm">
+              <span class="text-xs text-slate-400 font-semibold">Tepat Waktu</span>
+              <div id="myGuruHadir" class="text-2xl font-black text-emerald-600 mt-1">0</div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border shadow-sm">
+              <span class="text-xs text-slate-400 font-semibold">Terlambat</span>
+              <div id="myGuruTerlambat" class="text-2xl font-black text-amber-500 mt-1">0</div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border shadow-sm">
+              <span class="text-xs text-slate-400 font-semibold">Pulang Cepat</span>
+              <div id="myGuruPulangCepat" class="text-2xl font-black text-orange-500 mt-1">0</div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border shadow-sm">
+              <span class="text-xs text-slate-400 font-semibold">Sakit / Izin</span>
+              <div id="myGuruSakitIzin" class="text-2xl font-black text-blue-500 mt-1">0</div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border shadow-sm">
+              <span class="text-xs text-slate-400 font-semibold">Alpa</span>
+              <div id="myGuruAlpa" class="text-2xl font-black text-rose-600 mt-1">0</div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+            <div class="p-4 border-b flex justify-between items-center">
+              <h4 class="font-bold text-slate-800 text-sm">Riwayat Presensi Guru</h4>
+            </div>
+            <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs">
+              <thead><tr class="bg-slate-100 text-slate-600 uppercase"><th class="p-3">Tanggal & Jam</th><th class="p-3">Metode</th><th class="p-3">Status</th><th class="p-3">Keterangan</th></tr></thead>
+              <tbody id="myGuruPresensiTableBody" class="divide-y divide-slate-100"></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <!-- TAB 3: PENGAJUAN IZIN GURU (POIN 8) -->
+        <div id="guruPortal-izin" class="hidden space-y-6">
+          <div class="bg-white rounded-3xl p-6 sm:p-8 border shadow-sm max-w-xl mx-auto space-y-4">
+            <div class="border-b pb-3">
+              <h3 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-paper-plane text-teal-600"></i> Formulir Pengajuan Izin Dewan Guru
+              </h3>
+              <p class="text-xs text-slate-500">Ajukan izin tidak hadir karena sakit, cuti, atau tugas kedinasan luar.</p>
+            </div>
+            <form onsubmit="handleGuruIzinSubmit(event)" class="space-y-4 text-xs sm:text-sm">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-semibold mb-1">Mulai Tanggal</label>
+                  <input type="date" id="guruIzinTglMulai" required class="w-full p-2.5 border rounded-xl">
+                </div>
+                <div>
+                  <label class="block font-semibold mb-1">Sampai Tanggal</label>
+                  <input type="date" id="guruIzinTglSelesai" required class="w-full p-2.5 border rounded-xl">
+                </div>
+              </div>
+              <div>
+                <label class="block font-semibold mb-1">Jenis Izin</label>
+                <select id="guruIzinJenis" class="w-full p-2.5 border rounded-xl bg-white font-medium">
+                  <option value="Sakit">Sakit</option>
+                  <option value="Izin Pribadi">Izin Pribadi</option>
+                  <option value="Tugas Dinas Luar / Pelatihan">Tugas Dinas Luar / Pelatihan (KKG/MGMP)</option>
+                  <option value="Cuti Resmi">Cuti Resmi</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-semibold mb-1">Alasan / Keterangan Lengkap</label>
+                <textarea id="guruIzinAlasan" rows="3" required placeholder="Tuliskan keterangan detail keperluan izin..." class="w-full p-2.5 border rounded-xl text-xs"></textarea>
+              </div>
+              <div>
+                <label class="block font-semibold mb-1">Upload Bukti / Surat Tugas / Surat Dokter (Foto Opsional)</label>
+                <input type="file" id="guruIzinBuktiFile" accept="image/*,.pdf" class="w-full p-2 border rounded-xl text-xs">
+              </div>
+              <button type="submit" id="btnSubmitGuruIzin" class="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-paper-plane"></i> Kirim Pengajuan Izin Guru
+              </button>
+            </form>
+          </div>
+
+          <!-- Riwayat Izin Guru -->
+          <div class="bg-white rounded-2xl border shadow-sm p-4 space-y-3">
+            <h4 class="font-bold text-slate-800 text-sm">Riwayat Pengajuan Izin Saya</h4>
+            <div class="overflow-x-auto"><table class="w-full text-left text-xs">
+              <thead><tr class="bg-slate-100 text-slate-600 uppercase"><th class="p-2.5">Tanggal</th><th class="p-2.5">Jenis</th><th class="p-2.5">Alasan</th><th class="p-2.5 text-center">Status</th></tr></thead>
+              <tbody id="guruIzinHistoryBody" class="divide-y divide-slate-100"></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <!-- TAB 4: REKAP KEHADIRAN SISWA KELAS (UNTUK GURU WALI KELAS - POIN 7) -->
+        <div id="guruPortal-walikelas" class="hidden space-y-6">
+          <div class="bg-gradient-to-r from-amber-600 to-amber-700 rounded-2xl p-5 text-white shadow-md flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+              <span class="bg-white/20 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase">Monitoring Wali Kelas</span>
+              <h3 id="waliKelasBannerTitle" class="text-lg sm:text-xl font-extrabold mt-1">Rekapitulasi Kehadiran Siswa Kelas</h3>
+              <p class="text-amber-100 text-xs mt-0.5">Pantau statistik angka persentase kehadiran dan status harian siswa binaan kelas Anda.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="date" id="filterWaliKelasTanggal" onchange="renderWaliKelasStudentsTable()" class="p-2 rounded-xl text-xs text-slate-800 bg-white border font-semibold">
+            </div>
+          </div>
+
+          <!-- KPI Siswa Kelas Binaan -->
+          <div class="grid grid-cols-2 sm:grid-cols-6 gap-3">
+            <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+              <span class="text-[10px] text-slate-400 font-bold uppercase">Persentase</span>
+              <div id="waliKpiPersen" class="text-2xl font-black text-amber-600 mt-0.5">0%</div>
+            </div>
+            <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+              <span class="text-[10px] text-slate-400 font-bold uppercase">Hadir</span>
+              <div id="waliKpiHadir" class="text-2xl font-black text-emerald-600 mt-0.5">0</div>
+            </div>
+            <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+              <span class="text-[10px] text-slate-400 font-bold uppercase">Terlambat</span>
+              <div id="waliKpiTerlambat" class="text-2xl font-black text-amber-500 mt-0.5">0</div>
+            </div>
+            <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+              <span class="text-[10px] text-slate-400 font-bold uppercase">Pulang Cepat</span>
+              <div id="waliKpiPulangCepat" class="text-2xl font-black text-orange-500 mt-0.5">0</div>
+            </div>
+            <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+              <span class="text-[10px] text-slate-400 font-bold uppercase">Sakit/Izin</span>
+              <div id="waliKpiSakitIzin" class="text-2xl font-black text-blue-500 mt-0.5">0</div>
+            </div>
+            <div class="bg-white p-3.5 rounded-2xl border shadow-sm">
+              <span class="text-[10px] text-slate-400 font-bold uppercase">Alpa</span>
+              <div id="waliKpiAlpa" class="text-2xl font-black text-rose-600 mt-0.5">0</div>
+            </div>
+          </div>
+
+          <!-- Tabel Siswa Kelas Binaan Beserta Status Kehadirannya Hari Ini -->
+          <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+            <div class="p-4 border-b flex justify-between items-center bg-slate-50">
+              <h4 id="waliTableTitle" class="font-bold text-slate-800 text-xs sm:text-sm">Daftar Siswa & Status Kehadiran Hari Ini</h4>
+              <span id="waliTotalSiswaBadge" class="bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full text-xs font-bold">0 Siswa</span>
+            </div>
+            <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-100 text-slate-600 uppercase">
+                  <th class="p-3">No</th>
+                  <th class="p-3">Nama Siswa</th>
+                  <th class="p-3">NISN</th>
+                  <th class="p-3">Jenis Kelamin</th>
+                  <th class="p-3 text-center">Status Kehadiran</th>
+                  <th class="p-3">Jam Masuk</th>
+                  <th class="p-3">Keterangan</th>
+                </tr>
+              </thead>
+              <tbody id="waliKelasStudentsTableBody" class="divide-y divide-slate-100"></tbody>
+            </table></div>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -1145,43 +1690,8 @@
     <!-- ========================================== -->
     <section id="tab-siswa" class="hidden space-y-6">
       
-      <!-- 1. LOGIN SISWA CONTAINER -->
-      <div id="studentLoginContainer" class="max-w-md mx-auto my-8 bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-100 space-y-6">
-        <div class="text-center space-y-2">
-          <div class="w-16 h-16 bg-gradient-to-tr from-purple-600 to-pink-500 rounded-2xl flex items-center justify-center mx-auto text-white text-2xl shadow-lg">
-            <i class="fa-solid fa-id-badge"></i>
-          </div>
-          <h2 class="text-xl font-extrabold text-slate-800">Portal Siswa Digital</h2>
-          <p class="text-xs text-slate-500">Masuk untuk absensi scan wajah mandiri dan melihat rekap kehadiran, prestasi, serta catatan tata tertib Anda.</p>
-        </div>
-
-        <form onsubmit="handleStudentLogin(event)" class="space-y-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">NISN (Nomor Induk Siswa Nasional)</label>
-            <div class="relative">
-              <i class="fa-solid fa-address-card absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-              <input type="text" id="loginNisn" required placeholder="Contoh: 0098765432" class="w-full pl-10 pr-3 py-2.5 border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-purple-400">
-            </div>
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal Lahir Siswa</label>
-            <div class="relative">
-              <i class="fa-solid fa-calendar-day absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-              <input type="date" id="loginTglLahir" required class="w-full pl-10 pr-3 py-2.5 border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-purple-400">
-            </div>
-            <span class="text-[10px] text-slate-400 mt-1 block">Pilih tanggal lahir sesuai dengan data dapodik/sekolah.</span>
-          </div>
-
-          <div id="studentLoginAlert" class="hidden p-3 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200"></div>
-
-          <button type="submit" id="btnStudentLoginSubmit" class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl text-xs shadow-lg hover:from-purple-700 hover:to-pink-700 transition flex items-center justify-center gap-2">
-            <i class="fa-solid fa-arrow-right-to-bracket"></i> Masuk ke Portal Siswa
-          </button>
-        </form>
-      </div>
-
-      <!-- 2. DASHBOARD SISWA CONTAINER (SETELAH LOGIN) -->
-      <div id="studentDashboardContainer" class="hidden space-y-6">
+      <!-- DASHBOARD SISWA CONTAINER -->
+      <div id="studentDashboardContainer" class="space-y-6">
         
         <!-- Header Info Siswa -->
         <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row justify-between items-center gap-6">
@@ -1201,7 +1711,7 @@
             <button onclick="previewMyStudentCard()" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl text-xs border border-white/20 transition flex items-center gap-1.5">
               <i class="fa-solid fa-id-card"></i> Lihat Kartu Pelajar
             </button>
-            <button onclick="studentLogout()" class="bg-rose-500/80 hover:bg-rose-600 text-white font-semibold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5">
+            <button onclick="logoutAll()" class="bg-rose-500/80 hover:bg-rose-600 text-white font-semibold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5">
               <i class="fa-solid fa-arrow-right-from-bracket"></i> Keluar
             </button>
           </div>
@@ -1212,6 +1722,9 @@
           <button onclick="switchStudentPortalTab('absen')" id="studentTabBtn-absen" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-indigo-600 text-white transition flex items-center gap-2 shrink-0">
             <i class="fa-solid fa-camera"></i> Absen Wajah Mandiri
           </button>
+          <button onclick="switchStudentPortalTab('izin')" id="studentTabBtn-izin" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0">
+            <i class="fa-solid fa-envelope-open-text"></i> Ajukan Izin
+          </button>
           <button onclick="switchStudentPortalTab('kehadiran')" id="studentTabBtn-kehadiran" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0">
             <i class="fa-solid fa-clipboard-check"></i> Rekap Kehadiran
           </button>
@@ -1221,6 +1734,57 @@
           <button onclick="switchStudentPortalTab('pelanggaran')" id="studentTabBtn-pelanggaran" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-2 shrink-0">
             <i class="fa-solid fa-shield-cat"></i> Rekap Tata Tertib
           </button>
+        </div>
+
+        <!-- TAB FORM AJUKAN IZIN SISWA (POIN 8) -->
+        <div id="studentPortal-izin" class="hidden space-y-6">
+          <div class="bg-white rounded-3xl p-6 sm:p-8 border shadow-sm max-w-xl mx-auto space-y-4">
+            <div class="border-b pb-3">
+              <h3 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-paper-plane text-indigo-600"></i> Formulir Pengajuan Izin Siswa
+              </h3>
+              <p class="text-xs text-slate-500">Ajukan izin tidak hadir karena sakit atau keperluan penting.</p>
+            </div>
+            <form onsubmit="handleStudentIzinSubmit(event)" class="space-y-4 text-xs sm:text-sm">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-semibold mb-1">Mulai Tanggal</label>
+                  <input type="date" id="studentIzinTglMulai" required class="w-full p-2.5 border rounded-xl">
+                </div>
+                <div>
+                  <label class="block font-semibold mb-1">Sampai Tanggal</label>
+                  <input type="date" id="studentIzinTglSelesai" required class="w-full p-2.5 border rounded-xl">
+                </div>
+              </div>
+              <div>
+                <label class="block font-semibold mb-1">Jenis Izin</label>
+                <select id="studentIzinJenis" class="w-full p-2.5 border rounded-xl bg-white font-medium">
+                  <option value="Sakit">Sakit</option>
+                  <option value="Izin">Izin (Keperluan Keluarga / Acara Penting)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-semibold mb-1">Alasan Lengkap</label>
+                <textarea id="studentIzinAlasan" rows="3" required placeholder="Tuliskan keterangan detail alasan tidak hadir..." class="w-full p-2.5 border rounded-xl text-xs"></textarea>
+              </div>
+              <div>
+                <label class="block font-semibold mb-1">Upload Bukti / Surat Dokter (Foto Opsional)</label>
+                <input type="file" id="studentIzinBuktiFile" accept="image/*,.pdf" class="w-full p-2 border rounded-xl text-xs">
+              </div>
+              <button type="submit" id="btnSubmitStudentIzin" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-paper-plane"></i> Kirim Pengajuan Izin
+              </button>
+            </form>
+          </div>
+
+          <!-- Riwayat Izin Siswa -->
+          <div class="bg-white rounded-2xl border shadow-sm p-4 space-y-3">
+            <h4 class="font-bold text-slate-800 text-sm">Riwayat Pengajuan Izin Saya</h4>
+            <div class="overflow-x-auto"><table class="w-full text-left text-xs">
+              <thead><tr class="bg-slate-100 text-slate-600 uppercase"><th class="p-2.5">Tanggal</th><th class="p-2.5">Jenis</th><th class="p-2.5">Alasan</th><th class="p-2.5 text-center">Status</th></tr></thead>
+              <tbody id="studentIzinHistoryBody" class="divide-y divide-slate-100"></tbody>
+            </table></div>
+          </div>
         </div>
 
         <!-- TAB 1: ABSEN SCAN WAJAH MANDIRI + GEOLOCATION -->
@@ -1875,7 +2439,9 @@
         <div>
           <label class="block font-semibold mb-1">Status Kehadiran</label>
           <select id="manualSiswaStatus" required class="w-full p-2.5 border rounded-lg">
-            <option value="Hadir">Hadir</option>
+            <option value="Hadir">Hadir (Tepat Waktu)</option>
+            <option value="Terlambat">Terlambat</option>
+            <option value="Pulang Cepat">Pulang Cepat</option>
             <option value="Sakit">Sakit</option>
             <option value="Izin">Izin</option>
             <option value="Alpa">Alpa</option>
@@ -1919,7 +2485,9 @@
         <div>
           <label class="block font-semibold mb-1">Status Kehadiran</label>
           <select id="manualGuruStatus" required class="w-full p-2.5 border rounded-lg">
-            <option value="Hadir">Hadir</option>
+            <option value="Hadir">Hadir (Tepat Waktu)</option>
+            <option value="Terlambat">Terlambat</option>
+            <option value="Pulang Cepat">Pulang Cepat</option>
             <option value="Sakit">Sakit</option>
             <option value="Izin">Izin</option>
             <option value="Alpa">Alpa</option>
@@ -1932,6 +2500,281 @@
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeManualPresensiGuruModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
           <button type="submit" class="px-5 py-2 bg-teal-600 text-white rounded-xl font-medium shadow">Simpan Presensi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL UNIFIED MULTI-USER LOGIN (POIN 11) -->
+  <div id="modalUnifiedLogin" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-5 animate-scale-in">
+      <div class="flex justify-between items-center border-b pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">
+            <i class="fa-solid fa-lock"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-extrabold text-slate-800">Masuk ke Portal</h3>
+            <p class="text-[11px] text-slate-500">Pilih peran dan masukkan kredensial akun Anda.</p>
+          </div>
+        </div>
+        <button onclick="closeLoginModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+      </div>
+
+      <!-- Role Tabs -->
+      <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-2xl text-xs font-bold">
+        <button type="button" onclick="setLoginRole('admin')" id="loginRoleBtn-admin" class="py-2 rounded-xl transition bg-indigo-600 text-white shadow-sm flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-user-shield"></i> Admin
+        </button>
+        <button type="button" onclick="setLoginRole('guru')" id="loginRoleBtn-guru" class="py-2 rounded-xl transition text-slate-600 hover:text-slate-800 flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-chalkboard-user"></i> Guru
+        </button>
+        <button type="button" onclick="setLoginRole('siswa')" id="loginRoleBtn-siswa" class="py-2 rounded-xl transition text-slate-600 hover:text-slate-800 flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-graduation-cap"></i> Siswa
+        </button>
+      </div>
+
+      <form onsubmit="handleUnifiedLogin(event)" class="space-y-4 text-xs sm:text-sm">
+        <input type="hidden" id="loginRole" value="admin">
+        
+        <div>
+          <label id="loginUsernameLabel" class="block font-semibold mb-1 text-slate-700">Username / ID Admin</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <i id="loginUsernameIcon" class="fa-solid fa-user"></i>
+            </span>
+            <input type="text" id="loginUsername" required placeholder="Masukkan username admin..." class="w-full pl-9 pr-3 py-2.5 border rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1 text-slate-700">Kata Sandi</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <i class="fa-solid fa-key"></i>
+            </span>
+            <input type="password" id="loginPassword" required placeholder="Masukkan kata sandi..." class="w-full pl-9 pr-10 py-2.5 border rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs">
+            <button type="button" onclick="togglePasswordVisibility('loginPassword', 'eyeIconLogin')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+              <i id="eyeIconLogin" class="fa-solid fa-eye text-xs"></i>
+            </button>
+          </div>
+        </div>
+
+        <p id="loginTipText" class="text-[11px] text-slate-400 bg-slate-50 p-2.5 rounded-xl border">
+          <i class="fa-solid fa-circle-info mr-1 text-indigo-500"></i> Untuk siswa, gunakan NISN sebagai Username dan Password default.
+        </p>
+
+        <div class="pt-2">
+          <button type="submit" id="btnSubmitUnifiedLogin" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-lg transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-right-to-bracket"></i> Masuk Sekarang
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL EDIT DATA PRESENSI (POIN 6) -->
+  <div id="modalEditPresensi" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <div>
+          <h3 id="editPresensiModalTitle" class="text-base font-bold text-slate-800">Koreksi Data Presensi</h3>
+          <p id="editPresensiSubTitle" class="text-xs text-slate-500">Perbaiki status atau jam presensi jika terdapat kekeliruan.</p>
+        </div>
+        <button onclick="closeEditPresensiModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+      </div>
+
+      <form onsubmit="handleEditPresensiSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="editPresensiType">
+        <input type="hidden" id="editPresensiRowId">
+
+        <div class="bg-slate-50 p-3 rounded-xl border text-xs">
+          <div class="text-slate-500">Nama:</div>
+          <div id="editPresensiNamaText" class="font-bold text-slate-800 text-sm">-</div>
+          <div id="editPresensiIdText" class="text-slate-400 text-[11px] mt-0.5">-</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold mb-1">Tanggal</label>
+            <input type="date" id="editPresensiTanggal" required class="w-full p-2.5 border rounded-lg">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Jam Presensi</label>
+            <input type="time" id="editPresensiJam" required class="w-full p-2.5 border rounded-lg">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1">Status Kehadiran</label>
+          <select id="editPresensiStatus" required class="w-full p-2.5 border rounded-lg font-bold">
+            <option value="Hadir" class="text-emerald-600">Hadir (Tepat Waktu)</option>
+            <option value="Terlambat" class="text-amber-600">Terlambat</option>
+            <option value="Pulang Cepat" class="text-orange-600">Pulang Cepat</option>
+            <option value="Sakit" class="text-blue-600">Sakit</option>
+            <option value="Izin" class="text-indigo-600">Izin</option>
+            <option value="Alpa" class="text-rose-600">Alpa</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1">Keterangan Koreksi</label>
+          <input type="text" id="editPresensiKeterangan" placeholder="Contoh: Koreksi izin sakit / salah scan" class="w-full p-2.5 border rounded-lg">
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeEditPresensiModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" id="btnSubmitEditPresensi" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium shadow flex items-center gap-1.5">
+            <i class="fa-solid fa-check"></i> Simpan Koreksi
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL REKAM WAJAH SISWA & GURU (POIN 4) -->
+  <div id="modalRekamWajah" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b pb-3">
+        <div>
+          <h3 id="rekamWajahTitle" class="text-base font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-face-smile text-indigo-600"></i> Perekaman Data Wajah
+          </h3>
+          <p id="rekamWajahSubTitle" class="text-xs text-slate-500">Daftarkan fitur wajah untuk sistem absensi pendeteksian otomatis.</p>
+        </div>
+        <button onclick="closeRekamWajahModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+      </div>
+
+      <div class="space-y-4 text-xs sm:text-sm">
+        <input type="hidden" id="rekamWajahTargetRole" value="Siswa">
+
+        <!-- Selector Target Siswa / Guru -->
+        <div>
+          <label id="rekamWajahSelectLabel" class="block font-semibold mb-1">Pilih Siswa / Guru yang Akan Direkam</label>
+          <select id="rekamWajahTargetSelect" class="w-full p-2.5 border rounded-xl bg-white font-medium" onchange="onSelectRekamWajahTarget()">
+            <option value="">-- Pilih Orang --</option>
+          </select>
+        </div>
+
+        <!-- Kamera Live Preview -->
+        <div class="relative w-full aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-inner mx-auto">
+          <video id="rekamWajahVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+          <canvas id="rekamWajahCanvas" class="hidden"></canvas>
+
+          <!-- Frame Panduan Oval Wajah -->
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="w-40 h-52 border-2 border-dashed border-indigo-400 rounded-full shadow-lg"></div>
+          </div>
+
+          <div id="cameraLoadingRekam" class="absolute inset-0 bg-slate-900/80 flex items-center justify-center text-white text-xs font-semibold gap-2 hidden">
+            <i class="fa-solid fa-spinner fa-spin text-lg"></i> Mengaktifkan kamera...
+          </div>
+        </div>
+
+        <div class="bg-indigo-50/70 p-3 rounded-2xl border border-indigo-100 text-xs text-indigo-900 space-y-1">
+          <div class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-lightbulb text-amber-500"></i> Petunjuk Perekaman:</div>
+          <p>Pastikan wajah berada tepat di dalam lingkaran oval dengan pencahayaan yang cukup dan tanpa mengenakan masker/topi.</p>
+        </div>
+
+        <!-- Status Terdaftar Sebelumnya -->
+        <div id="rekamStatusExisting" class="hidden p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between">
+          <span><i class="fa-solid fa-circle-check mr-1 text-emerald-600"></i> Wajah sudah pernah direkam. Rekam ulang akan memperbarui data.</span>
+          <img id="rekamExistingThumb" src="" class="w-8 h-8 rounded-full border object-cover">
+        </div>
+
+        <!-- Tombol Aksi -->
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeRekamWajahModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="button" id="btnCaptureRekamWajah" onclick="captureAndSaveRekamWajah()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow flex items-center gap-2">
+            <i class="fa-solid fa-camera"></i> Ambil & Simpan Rekaman Wajah
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL FORM USER MANAGEMENT (POIN 12) -->
+  <div id="modalUserForm" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <div>
+          <h3 id="userModalTitle" class="text-base font-bold text-slate-800">Tambah Akun Pengguna</h3>
+          <p class="text-xs text-slate-500">Kelola akun Admin, Guru, dan Siswa.</p>
+        </div>
+        <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+      </div>
+
+      <form onsubmit="handleUserFormSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="userFormId">
+
+        <div>
+          <label class="block font-semibold mb-1">Peran Akun (Role)</label>
+          <select id="userFormRole" required class="w-full p-2.5 border rounded-xl bg-white font-medium" onchange="onUserRoleChange()">
+            <option value="Admin">Admin</option>
+            <option value="Guru">Guru</option>
+            <option value="Siswa">Siswa</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1">Nama Lengkap</label>
+          <input type="text" id="userFormNama" required placeholder="Nama lengkap..." class="w-full p-2.5 border rounded-xl">
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1">Username / ID Login</label>
+          <input type="text" id="userFormUsername" required placeholder="Username unik (atau NIP/NISN)..." class="w-full p-2.5 border rounded-xl">
+        </div>
+
+        <div id="userPasswordGroup">
+          <label class="block font-semibold mb-1">Kata Sandi</label>
+          <input type="password" id="userFormPassword" placeholder="Masukkan password..." class="w-full p-2.5 border rounded-xl">
+          <p class="text-[11px] text-slate-400 mt-1" id="userPasswordHint">Kosongkan jika tidak ingin mengubah password saat edit.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold mb-1">NIP / NISN Ref (Opsional)</label>
+            <input type="text" id="userFormRefId" placeholder="NIP/NISN..." class="w-full p-2.5 border rounded-xl">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Status Akun</label>
+            <select id="userFormStatus" class="w-full p-2.5 border rounded-xl bg-white font-medium">
+              <option value="Aktif">Aktif</option>
+              <option value="Nonaktif">Nonaktif</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeUserModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium shadow">Simpan Akun</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL RESET PASSWORD USER (POIN 12) -->
+  <div id="modalResetPasswordUser" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="text-base font-bold text-slate-800">Reset Password Pengguna</h3>
+        <button onclick="closeResetPasswordModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+      </div>
+      <form onsubmit="handleResetPasswordSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="resetUserId">
+        <div class="bg-slate-50 p-3 rounded-xl border text-xs">
+          <div class="text-slate-500">Pengguna:</div>
+          <div id="resetUserNama" class="font-bold text-slate-800">-</div>
+          <div id="resetUserRole" class="text-indigo-600 font-semibold text-[11px]">-</div>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Password Baru</label>
+          <input type="password" id="resetNewPassword" required minlength="4" placeholder="Password baru..." class="w-full p-2.5 border rounded-xl">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeResetPasswordModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-medium shadow">Simpan Password</button>
         </div>
       </form>
     </div>

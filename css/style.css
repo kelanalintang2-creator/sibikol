@@ -152,10 +152,9 @@ body {
   body * {
     visibility: hidden;
   }
-  #printSection, #printSection * {
-    visibility: visible;
-  }
   #printSection {
+    display: block !important;
+    visibility: visible !important;
     position: absolute;
     left: 0;
     top: 0;
@@ -163,6 +162,10 @@ body {
     margin: 0;
     padding: 8mm;
     background: #ffffff;
+    z-index: 999999;
+  }
+  #printSection * {
+    visibility: visible !important;
   }
   .print-grid {
     display: grid !important;
@@ -182,3 +185,57 @@ body {
     display: none !important;
   }
 }
+
+/* ==================================================== */
+/* ANIMASI SCROLL INTERAKTIF PORTAL SEKOLAH (POIN 14)   */
+/* ==================================================== */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-on-scroll.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-left {
+  opacity: 0;
+  transform: translateX(-35px);
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.reveal-left.is-revealed {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.reveal-right {
+  opacity: 0;
+  transform: translateX(35px);
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.reveal-right.is-revealed {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.reveal-zoom {
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.reveal-zoom.is-revealed {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Delay staggered untuk card grid */
+.delay-100 { transition-delay: 100ms; }
+.delay-200 { transition-delay: 200ms; }
+.delay-300 { transition-delay: 300ms; }
+.delay-400 { transition-delay: 400ms; }
