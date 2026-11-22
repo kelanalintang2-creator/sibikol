@@ -264,12 +264,16 @@ body {
 @media (min-width: 768px) {
   #adminSidebar {
     position: sticky !important;
-    top: 5rem !important;
+    top: 5.5rem !important;
+    height: calc(100vh - 7rem) !important;
+    max-height: calc(100vh - 7rem) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    overflow: hidden !important;
     transform: none !important;
     opacity: 1 !important;
     visibility: visible !important;
-    display: flex !important;
-    max-height: calc(100vh - 6rem) !important;
   }
   #adminSidebarBackdrop {
     display: none !important;
@@ -286,6 +290,10 @@ body {
     max-height: 100vh !important;
     width: 18rem !important;
     z-index: 9999 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    overflow: hidden !important;
     transform: translateX(-100%) !important;
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
     border-radius: 0 1.5rem 1.5rem 0 !important;

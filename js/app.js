@@ -633,6 +633,10 @@ function logoutAll() {
   }
 }
 
+function adminLogout() {
+  logoutAll();
+}
+
 // ============================================
 // THEME GRADIENT & ANIMASI SCROLL (POIN 9 & 14)
 // ============================================
@@ -2306,6 +2310,181 @@ function downloadKonselingTemplate() {
 
 function downloadPelanggaranTemplate() {
   downloadCatatanTemplate();
+}
+
+// ============================================
+// MODUL IMPORT DATA EXCEL (SISWA, GURU, PRESTASI, PELANGGARAN, KONSELING)
+// ============================================
+function showUploadBtn(type) {
+  const btn = document.getElementById('btnUpload' + type);
+  const input = document.getElementById('excel' + type + 'File');
+  if (!btn || !input || !input.files || input.files.length === 0) return;
+  const fileName = input.files[0].name;
+  btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Upload: ${fileName.substring(0, 14)}...`;
+  btn.classList.remove('hidden');
+}
+
+function parseExcelToRows_(file, expectedMinCols, targetCols) {
+  return new Promise((resolve, reject) => {
+    if (typeof XLSX === 'undefined') {
+      return reject(new Error('Pustaka SheetJS (XLSX) tidak terdeteksi di browser.'));
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rawJson = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
+
+        if (!rawJson || rawJson.length <= 1) {
+          return reject(new Error('File Excel tidak memiliki baris data (hanya header atau kosong).'));
+        }
+
+        // Baris 0 adalah Header template, baris 1 dst adalah Data
+        const cleanRows = [];
+        for (let i = 1; i < rawJson.length; i++) {
+          const row = rawJson[i];
+          if (!row || !Array.isArray(row)) continue;
+          // Cek apakah seluruh sel di baris ini kosong
+          const hasContent = row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '');
+          if (!hasContent) continue;
+
+          // Normalisasi panjang baris menjadi tepat targetCols
+          const normalized = new Array(targetCols).fill('');
+          for (let c = 0; c < Math.min(row.length, targetCols); c++) {
+            let val = row[c];
+            if (val === null || val === undefined) {
+              val = '';
+            } else if (val instanceof Date && !isNaN(val)) {
+              val = val.toISOString().split('T')[0];
+            } else {
+              val = String(val).trim();
+            }
+            normalized[c] = val;
+          }
+          cleanRows.push(normalized);
+        }
+
+        if (cleanRows.length === 0) {
+          return reject(new Error('Tidak ada baris data yang valid ditemukan di file Excel.'));
+        }
+
+        resolve(cleanRows);
+      } catch (err) {
+        reject(new Error('Gagal memproses file Excel: ' + err.message));
+      }
+    };
+    reader.onerror = function() {
+      reject(new Error('Gagal membaca file Excel dari perangkat Anda.'));
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function executeGenericExcelImport_(config) {
+  const fileInput = document.getElementById(config.fileInputId);
+  const btn = document.getElementById(config.btnId);
+  const file = fileInput?.files?.[0];
+
+  if (!file) {
+    alert(`Silakan pilih file Excel (.xlsx atau .xls) untuk data ${config.entityName} terlebih dahulu!`);
+    return;
+  }
+
+  const origBtnHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Mengimpor...`;
+    btn.disabled = true;
+  }
+
+  try {
+    const cleanRows = await parseExcelToRows_(file, config.expectedMinCols, config.targetCols);
+    
+    const confirmMsg = `Konfirmasi Import Data ${config.entityName}:\n\n` +
+      `File: ${file.name}\n` +
+      `Jumlah Data: ${cleanRows.length} baris\n\n` +
+      `Lanjutkan import ke database spreadsheet?`;
+    
+    if (!confirm(confirmMsg)) {
+      if (btn) { btn.innerHTML = origBtnHtml; btn.disabled = false; }
+      return;
+    }
+
+    const res = await apiPost(config.apiAction, { rows: cleanRows }, currentAdminToken);
+    alert(res.message);
+
+    if (res.success) {
+      if (fileInput) fileInput.value = '';
+      if (btn) {
+        btn.classList.add('hidden');
+        btn.innerHTML = origBtnHtml;
+        btn.disabled = false;
+      }
+      loadDataSWR(true);
+    } else {
+      if (btn) { btn.innerHTML = origBtnHtml; btn.disabled = false; }
+    }
+  } catch (err) {
+    alert(err.message);
+    if (btn) { btn.innerHTML = origBtnHtml; btn.disabled = false; }
+  }
+}
+
+function handleStudentExcelImport() {
+  executeGenericExcelImport_({
+    entityName: 'Siswa',
+    fileInputId: 'excelStudentFile',
+    btnId: 'btnUploadStudent',
+    apiAction: 'siswa.importExcel',
+    expectedMinCols: 10,
+    targetCols: 16
+  });
+}
+
+function handleTeacherExcelImport() {
+  executeGenericExcelImport_({
+    entityName: 'Guru',
+    fileInputId: 'excelTeacherFile',
+    btnId: 'btnUploadTeacher',
+    apiAction: 'guru.importExcel',
+    expectedMinCols: 8,
+    targetCols: 14
+  });
+}
+
+function handlePrestasiExcelImport() {
+  executeGenericExcelImport_({
+    entityName: 'Prestasi Siswa',
+    fileInputId: 'excelPrestasiFile',
+    btnId: 'btnUploadPrestasi',
+    apiAction: 'prestasi.importExcel',
+    expectedMinCols: 5,
+    targetCols: 8
+  });
+}
+
+function handleCatatanExcelImport() {
+  executeGenericExcelImport_({
+    entityName: 'Pelanggaran Siswa',
+    fileInputId: 'excelCatatanFile',
+    btnId: 'btnUploadCatatan',
+    apiAction: 'pelanggaran.importExcel',
+    expectedMinCols: 6,
+    targetCols: 11
+  });
+}
+
+function handleKonselingExcelImport() {
+  executeGenericExcelImport_({
+    entityName: 'Layanan Konseling',
+    fileInputId: 'excelKonselingFile',
+    btnId: 'btnUploadKonseling',
+    apiAction: 'konseling.importExcel',
+    expectedMinCols: 6,
+    targetCols: 10
+  });
 }
 
 // ============================================

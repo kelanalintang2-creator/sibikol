@@ -267,33 +267,32 @@
       <div class="flex flex-col md:flex-row gap-5 items-start w-full">
         
         <!-- SIDEBAR KIRI ADMIN (POIN 3, 4, 5, 10) -->
-        <aside id="adminSidebar" class="relative md:sticky top-0 md:top-24 w-full md:w-64 shrink-0 transition-all duration-300 rounded-2xl md:rounded-3xl shadow-xl overflow-hidden text-white p-4 space-y-3 bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-950 border border-white/10 flex flex-col justify-between z-30">
-          <div>
-            <!-- Header Sidebar (Logo, Judul & Tombol Minimize Desktop) -->
-            <div class="flex items-center justify-between p-2 border-b border-white/10 pb-3 mb-2">
-              <div class="flex items-center gap-3 overflow-hidden">
-                <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-lg font-bold shadow-md shrink-0">
-                  <i class="fa-solid fa-shield-halved"></i>
-                </div>
-                <div class="sidebar-header-info overflow-hidden">
-                  <h4 class="font-extrabold text-xs sm:text-sm text-white truncate">Admin Panel</h4>
-                  <span class="text-[10px] text-indigo-300 block">SDN Pilangrejo 1</span>
-                </div>
+        <aside id="adminSidebar" class="relative md:sticky top-0 md:top-20 w-full md:w-64 shrink-0 transition-all duration-300 rounded-2xl md:rounded-3xl shadow-xl overflow-hidden text-white p-3.5 bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-950 border border-white/10 flex flex-col justify-between z-30">
+          <!-- Header Sidebar (Logo, Judul & Tombol Minimize Desktop) -->
+          <div class="flex items-center justify-between p-1.5 border-b border-white/10 pb-3 mb-1 shrink-0">
+            <div class="flex items-center gap-2.5 overflow-hidden">
+              <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-base font-bold shadow-md shrink-0">
+                <i class="fa-solid fa-shield-halved"></i>
               </div>
-              <div class="flex items-center gap-1">
-                <!-- Tombol Collapse / Minimize (Desktop - POIN 3) -->
-                <button type="button" onclick="toggleAdminSidebarCollapse()" class="hidden md:flex p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition" title="Minimize / Perluas Sidebar">
-                  <i id="btnCollapseSidebarIcon" class="fa-solid fa-angles-left text-xs"></i>
-                </button>
-                <!-- Tombol Tutup (Mobile - POIN 3) -->
-                <button type="button" onclick="toggleMobileSidebar(false)" class="md:hidden p-2 rounded-xl text-slate-400 hover:text-white text-lg">
-                  &times;
-                </button>
+              <div class="sidebar-header-info overflow-hidden">
+                <h4 class="font-extrabold text-xs sm:text-sm text-white truncate">Admin Panel</h4>
+                <span class="text-[10px] text-indigo-300 block">SDN Pilangrejo 1</span>
               </div>
             </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <!-- Tombol Collapse / Minimize (Desktop - POIN 3) -->
+              <button type="button" onclick="toggleAdminSidebarCollapse()" class="hidden md:flex p-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition" title="Minimize / Perluas Sidebar">
+                <i id="btnCollapseSidebarIcon" class="fa-solid fa-angles-left text-xs"></i>
+              </button>
+              <!-- Tombol Tutup (Mobile - POIN 3) -->
+              <button type="button" onclick="toggleMobileSidebar(false)" class="md:hidden p-1.5 rounded-xl text-slate-400 hover:text-white text-lg">
+                &times;
+              </button>
+            </div>
+          </div>
 
-            <!-- Navigasi Menu 11 Urutan Lengkap (Scrollable - POIN 4 & 5) -->
-            <nav class="space-y-1 text-xs font-semibold max-h-[calc(100vh-210px)] overflow-y-auto custom-sidebar-scroll pr-1">
+          <!-- Navigasi Menu 11 Urutan Lengkap (Flex-1 Scrollable - POIN 4 & 5) -->
+          <nav class="flex-1 min-h-0 space-y-1 text-xs font-semibold overflow-y-auto custom-sidebar-scroll pr-1 my-1">
               
               <!-- 1. Dashboard dan Cari -->
               <button onclick="switchAdminSub('dashboard')" id="subnav-dashboard" class="sidebar-btn w-full px-3 py-2.5 rounded-xl bg-indigo-600 text-white transition flex items-center gap-2.5 text-left shadow-sm">
@@ -418,12 +417,12 @@
               </button>
 
             </nav>
-          </div>
 
-          <div class="border-t border-white/10 pt-2 shrink-0">
-            <button onclick="adminLogout()" class="sidebar-btn w-full px-3 py-2 rounded-xl text-rose-300 hover:text-white hover:bg-rose-600/30 transition flex items-center gap-2 text-xs font-semibold">
-              <i class="fa-solid fa-right-from-bracket w-5 text-center text-xs shrink-0"></i>
-              <span class="sidebar-text truncate">Keluar Admin</span>
+          <!-- Footer Tombol Keluar (Terkunci di PALING BAWAH Sidebar - Tidak Tertutup) -->
+          <div class="border-t border-white/10 pt-2.5 mt-auto shrink-0">
+            <button type="button" onclick="logoutAll()" class="sidebar-btn w-full px-3 py-2.5 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white transition flex items-center gap-2.5 text-xs font-bold border border-rose-500/20 shadow-sm" title="Keluar dari Sistem">
+              <i class="fa-solid fa-right-from-bracket w-5 text-center text-sm text-rose-400 shrink-0"></i>
+              <span class="sidebar-text truncate">Keluar dari Sistem</span>
             </button>
           </div>
         </aside>
