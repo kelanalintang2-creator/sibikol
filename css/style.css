@@ -239,3 +239,61 @@ body {
 .delay-200 { transition-delay: 200ms; }
 .delay-300 { transition-delay: 300ms; }
 .delay-400 { transition-delay: 400ms; }
+
+/* ==================================================== */
+/* CUSTOM SIDEBAR SCROLLBAR & MINIMIZE STATE (POIN 3, 5) */
+/* ==================================================== */
+.custom-sidebar-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-sidebar-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+.custom-sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+}
+.custom-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+/* Sidebar Collapsed / Minimized Mode (Desktop) */
+#adminSidebar.is-collapsed {
+  width: 5rem !important; /* 80px */
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+}
+#adminSidebar.is-collapsed .sidebar-text,
+#adminSidebar.is-collapsed .sidebar-arrow,
+#adminSidebar.is-collapsed .sidebar-badge,
+#adminSidebar.is-collapsed .sidebar-sub-container {
+  display: none !important;
+}
+#adminSidebar.is-collapsed .sidebar-btn {
+  justify-content: center !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+#adminSidebar.is-collapsed .sidebar-header-info {
+  display: none !important;
+}
+
+/* Animasi Scanner Wajah Otomatis (POIN 6) */
+@keyframes scanVertical {
+  0% { top: 12%; opacity: 0.85; }
+  50% { top: 86%; opacity: 1; }
+  100% { top: 12%; opacity: 0.85; }
+}
+.face-scanner-line {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #38bdf8, #818cf8, #38bdf8, transparent);
+  box-shadow: 0 0 12px #38bdf8, 0 0 20px #818cf8;
+  border-radius: 9999px;
+  animation: scanVertical 2.2s infinite ease-in-out;
+  pointer-events: none;
+}
+

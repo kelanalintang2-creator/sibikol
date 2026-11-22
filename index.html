@@ -92,11 +92,11 @@
     </div>
   </header>
 
-  <!-- Container Utama -->
-  <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 space-y-10">
+  <!-- Container Utama (Layout Full-Width untuk Admin Sesuai Poin 2) -->
+  <main id="mainContainer" class="flex-grow w-full px-2 sm:px-4 lg:px-6 py-4 space-y-6">
 
     <!-- PORTAL SEKOLAH (DASHBOARD UTAMA) -->
-    <section id="tab-dashboard" class="space-y-10">
+    <section id="tab-dashboard" class="max-w-7xl mx-auto space-y-10">
       
       <!-- Hero Banner Utama Rasio 16:9 -->
       <div class="relative bg-slate-900 rounded-3xl overflow-hidden shadow-2xl aspect-16-9 max-h-[500px] w-full flex items-center">
@@ -250,84 +250,186 @@
 
     </section>
 
-    <!-- ADMIN PANEL TAB (DENGAN LEFT SIDEBAR NAVIGATION SESUAI POIN 10) -->
-    <section id="tab-admin" class="hidden">
-      <div class="flex flex-col lg:flex-row gap-6 items-start">
+    <!-- ADMIN PANEL TAB (DENGAN LEFT SIDEBAR NAVIGATION SESUAI POIN 2, 3, 4, 5, 10) -->
+    <section id="tab-admin" class="w-full hidden">
+      <!-- Backdrop Gelap untuk Mobile Drawer (POIN 3) -->
+      <div id="adminSidebarBackdrop" onclick="toggleMobileSidebar(false)" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 hidden lg:hidden"></div>
+
+      <!-- Bar Atas Khusus Mobile Admin (POIN 3) -->
+      <div class="lg:hidden flex items-center justify-between bg-slate-900 text-white px-4 py-3 rounded-2xl mb-4 border border-white/10 shadow-md">
+        <button type="button" onclick="toggleMobileSidebar()" class="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-2">
+          <i class="fa-solid fa-bars text-sm"></i>
+          <span>Menu Navigasi</span>
+        </button>
+        <span class="text-xs font-extrabold text-indigo-300">Admin Panel</span>
+      </div>
+
+      <div class="flex flex-col lg:flex-row gap-5 items-start w-full">
         
-        <!-- SIDEBAR KIRI ADMIN -->
-        <aside id="adminSidebar" class="w-full lg:w-64 shrink-0 rounded-3xl shadow-xl overflow-hidden text-white p-4 space-y-4 bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-950 border border-white/10 sticky top-20">
-          <div class="flex items-center gap-3 p-2 border-b border-white/10 pb-3">
-            <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-lg font-bold shadow-md shrink-0">
-              <i class="fa-solid fa-shield-halved"></i>
+        <!-- SIDEBAR KIRI ADMIN (POIN 3, 4, 5, 10) -->
+        <aside id="adminSidebar" class="fixed lg:sticky top-0 lg:top-20 left-0 h-full lg:h-auto z-50 lg:z-10 w-64 shrink-0 -translate-x-full lg:translate-x-0 transition-all duration-300 rounded-none lg:rounded-3xl shadow-2xl overflow-hidden text-white p-4 space-y-3 bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-950 border-r lg:border border-white/10 flex flex-col justify-between">
+          <div>
+            <!-- Header Sidebar (Logo, Judul & Tombol Minimize Desktop) -->
+            <div class="flex items-center justify-between p-2 border-b border-white/10 pb-3 mb-2">
+              <div class="flex items-center gap-3 overflow-hidden">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-lg font-bold shadow-md shrink-0">
+                  <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div class="sidebar-header-info overflow-hidden">
+                  <h4 class="font-extrabold text-xs sm:text-sm text-white truncate">Admin Panel</h4>
+                  <span class="text-[10px] text-indigo-300 block">SDN Pilangrejo 1</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1">
+                <!-- Tombol Collapse / Minimize (Desktop - POIN 3) -->
+                <button type="button" onclick="toggleAdminSidebarCollapse()" class="hidden lg:flex p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition" title="Minimize / Perluas Sidebar">
+                  <i id="btnCollapseSidebarIcon" class="fa-solid fa-angles-left text-xs"></i>
+                </button>
+                <!-- Tombol Tutup (Mobile - POIN 3) -->
+                <button type="button" onclick="toggleMobileSidebar(false)" class="lg:hidden p-2 rounded-xl text-slate-400 hover:text-white text-lg">
+                  &times;
+                </button>
+              </div>
             </div>
-            <div class="overflow-hidden">
-              <h4 class="font-extrabold text-xs sm:text-sm text-white truncate">Admin Panel</h4>
-              <span class="text-[10px] text-indigo-300 block">SDN Pilangrejo 1</span>
-            </div>
+
+            <!-- Navigasi Menu 11 Urutan Lengkap (Scrollable - POIN 4 & 5) -->
+            <nav class="space-y-1 text-xs font-semibold max-h-[calc(100vh-210px)] overflow-y-auto custom-sidebar-scroll pr-1">
+              
+              <!-- 1. Dashboard dan Cari -->
+              <button onclick="switchAdminSub('dashboard')" id="subnav-dashboard" class="sidebar-btn w-full px-3 py-2.5 rounded-xl bg-indigo-600 text-white transition flex items-center gap-2.5 text-left shadow-sm">
+                <i class="fa-solid fa-chart-pie w-5 text-center text-sm shrink-0"></i>
+                <span class="sidebar-text truncate">Dashboard dan Cari</span>
+              </button>
+
+              <!-- 2. Data Master (Dropdown: Data Siswa, Data Guru, Data Kelas) -->
+              <div class="space-y-0.5">
+                <button type="button" onclick="toggleSidebarGroup('master')" id="group-master-btn" class="sidebar-btn w-full px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center justify-between text-left">
+                  <div class="flex items-center gap-2.5 overflow-hidden">
+                    <i class="fa-solid fa-folder-open w-5 text-center text-sm text-blue-400 shrink-0"></i>
+                    <span class="sidebar-text truncate">Data Master</span>
+                  </div>
+                  <i id="group-master-arrow" class="sidebar-arrow fa-solid fa-chevron-down text-[10px] transition-transform"></i>
+                </button>
+                <div id="group-master-sub" class="sidebar-sub-container pl-4 space-y-0.5">
+                  <button onclick="switchAdminSub('siswa')" id="subnav-siswa" class="sidebar-btn w-full px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2 text-left">
+                    <i class="fa-solid fa-user-graduate w-4 text-center text-xs text-indigo-400 shrink-0"></i>
+                    <span class="sidebar-text truncate">Data Siswa</span>
+                  </button>
+                  <button onclick="switchAdminSub('guru')" id="subnav-guru" class="sidebar-btn w-full px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2 text-left">
+                    <i class="fa-solid fa-chalkboard-user w-4 text-center text-xs text-emerald-400 shrink-0"></i>
+                    <span class="sidebar-text truncate">Data Guru</span>
+                  </button>
+                  <button onclick="switchAdminSub('kelas')" id="subnav-kelas" class="sidebar-btn w-full px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2 text-left">
+                    <i class="fa-solid fa-school w-4 text-center text-xs text-blue-400 shrink-0"></i>
+                    <span class="sidebar-text truncate">Data Kelas</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 3. Presensi (Dropdown: Presensi Siswa, Presensi Guru, Approval Izin) -->
+              <div class="space-y-0.5">
+                <button type="button" onclick="toggleSidebarGroup('presensi')" id="group-presensi-btn" class="sidebar-btn w-full px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center justify-between text-left">
+                  <div class="flex items-center gap-2.5 overflow-hidden">
+                    <i class="fa-solid fa-clipboard-user w-5 text-center text-sm text-emerald-400 shrink-0"></i>
+                    <span class="sidebar-text truncate">Presensi</span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <span id="badgePendingIzin" class="sidebar-badge bg-amber-500 text-slate-950 font-extrabold px-1.5 py-0.2 rounded-full text-[10px] hidden">0</span>
+                    <i id="group-presensi-arrow" class="sidebar-arrow fa-solid fa-chevron-down text-[10px] transition-transform"></i>
+                  </div>
+                </button>
+                <div id="group-presensi-sub" class="sidebar-sub-container pl-4 space-y-0.5">
+                  <button onclick="switchAdminSub('presensi-siswa')" id="subnav-presensi-siswa" class="sidebar-btn w-full px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2 text-left">
+                    <i class="fa-solid fa-clipboard-check w-4 text-center text-xs text-pink-400 shrink-0"></i>
+                    <span class="sidebar-text truncate">Presensi Siswa</span>
+                  </button>
+                  <button onclick="switchAdminSub('presensi-guru')" id="subnav-presensi-guru" class="sidebar-btn w-full px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2 text-left">
+                    <i class="fa-solid fa-user-check w-4 text-center text-xs text-teal-400 shrink-0"></i>
+                    <span class="sidebar-text truncate">Presensi Guru</span>
+                  </button>
+                  <button onclick="switchAdminSub('approval-izin')" id="subnav-approval-izin" class="sidebar-btn w-full px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2 text-left">
+                    <i class="fa-solid fa-envelope-open-text w-4 text-center text-xs text-amber-400 shrink-0"></i>
+                    <span class="sidebar-text truncate">Approval Izin</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 4. Prestasi Siswa -->
+              <button onclick="switchAdminSub('prestasi')" id="subnav-prestasi" class="sidebar-btn w-full px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+                <i class="fa-solid fa-trophy w-5 text-center text-sm text-amber-400 shrink-0"></i>
+                <span class="sidebar-text truncate">Prestasi Siswa</span>
+              </button>
+
+              <!-- 5. Pelanggaran (Dropdown: Data Pelanggaran, Jenis Pelanggaran) -->
+              <div class="space-y-0.5">
+                <button type="button" onclick="toggleSidebarGroup('pelanggaran')" id="group-pelanggaran-btn" class="sidebar-btn w-full px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center justify-between text-left">
+                  <div class="flex items-center gap-2.5 overflow-hidden">
+                    <i class="fa-solid fa-triangle-exclamation w-5 text-center text-sm text-rose-400 shrink-0"></i>
+                    <span class="sidebar-text truncate">Pelanggaran</span>
+                  </div>
+                  <i id="group-pelanggaran-arrow" class="sidebar-arrow fa-solid fa-chevron-down text-[10px] transition-transform"></i>
+                </button>
+                <div id="group-pelanggaran-sub" class="sidebar-sub-container pl-4 space-y-0.5">
+                  <button onclick="switchAdminSub('catatan')" id="subnav-catatan" class="sidebar-btn w-full px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2 text-left">
+                    <i class="fa-solid fa-clipboard-user w-4 text-center text-xs text-rose-400 shrink-0"></i>
+                    <span class="sidebar-text truncate">Data Pelanggaran</span>
+                  </button>
+                  <button onclick="switchAdminSub('jenis')" id="subnav-jenis" class="sidebar-btn w-full px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2 text-left">
+                    <i class="fa-solid fa-list-check w-4 text-center text-xs text-purple-400 shrink-0"></i>
+                    <span class="sidebar-text truncate">Jenis Pelanggaran</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 6. Layanan Konseling -->
+              <button onclick="switchAdminSub('konseling')" id="subnav-konseling" class="sidebar-btn w-full px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+                <i class="fa-solid fa-hands-holding-child w-5 text-center text-sm text-sky-400 shrink-0"></i>
+                <span class="sidebar-text truncate">Layanan Konseling</span>
+              </button>
+
+              <!-- 7. User Management -->
+              <button onclick="switchAdminSub('users')" id="subnav-users" class="sidebar-btn w-full px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+                <i class="fa-solid fa-users-gear w-5 text-center text-sm text-cyan-400 shrink-0"></i>
+                <span class="sidebar-text truncate">User Management</span>
+              </button>
+
+              <!-- 8. Pengaturan Sistem -->
+              <button onclick="switchAdminSub('pengaturan')" id="subnav-pengaturan" class="sidebar-btn w-full px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+                <i class="fa-solid fa-sliders w-5 text-center text-sm text-orange-400 shrink-0"></i>
+                <span class="sidebar-text truncate">Pengaturan Sistem</span>
+              </button>
+
+              <!-- 9. Web Sekolah & CMS -->
+              <button onclick="switchAdminSub('web')" id="subnav-web" class="sidebar-btn w-full px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+                <i class="fa-solid fa-globe w-5 text-center text-sm text-teal-400 shrink-0"></i>
+                <span class="sidebar-text truncate">Web Sekolah & CMS</span>
+              </button>
+
+              <!-- 10. WhatsApp Gateway -->
+              <button onclick="switchAdminSub('wa')" id="subnav-wa" class="sidebar-btn w-full px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+                <i class="fa-brands fa-whatsapp w-5 text-center text-sm text-emerald-400 shrink-0"></i>
+                <span class="sidebar-text truncate">WhatsApp Gateway</span>
+              </button>
+
+              <!-- 11. Migrasi Database -->
+              <button onclick="switchAdminSub('migrasi')" id="subnav-migrasi" class="sidebar-btn w-full px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
+                <i class="fa-solid fa-database w-5 text-center text-sm text-purple-400 shrink-0"></i>
+                <span class="sidebar-text truncate">Migrasi Database</span>
+              </button>
+
+            </nav>
           </div>
 
-          <!-- Navigasi Menu Sidebar Admin Kiri -->
-          <nav class="space-y-1 text-xs font-semibold max-h-[70vh] overflow-y-auto hide-scrollbar">
-            <button onclick="switchAdminSub('dashboard')" id="subnav-dashboard" class="w-full px-3 py-2.5 rounded-xl bg-indigo-600 text-white transition flex items-center gap-2.5 text-left shadow-sm">
-              <i class="fa-solid fa-chart-pie w-4 text-center"></i> <span>Dashboard & Cari</span>
-            </button>
-            <button onclick="switchAdminSub('presensi-siswa')" id="subnav-presensi-siswa" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
-              <i class="fa-solid fa-clipboard-check w-4 text-center text-pink-400"></i> <span>Presensi Siswa</span>
-            </button>
-            <button onclick="switchAdminSub('presensi-guru')" id="subnav-presensi-guru" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
-              <i class="fa-solid fa-user-check w-4 text-center text-teal-400"></i> <span>Presensi Guru</span>
-            </button>
-            <button onclick="switchAdminSub('approval-izin')" id="subnav-approval-izin" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
-              <i class="fa-solid fa-envelope-open-text w-4 text-center text-amber-400"></i> <span>Approval Izin</span>
-              <span id="badgePendingIzin" class="ml-auto bg-amber-500 text-slate-950 font-extrabold px-1.5 py-0.5 rounded-full text-[10px] hidden">0</span>
-            </button>
-            <button onclick="switchAdminSub('siswa')" id="subnav-siswa" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
-              <i class="fa-solid fa-user-graduate w-4 text-center text-indigo-400"></i> <span>Data Siswa</span>
-            </button>
-            <button onclick="switchAdminSub('guru')" id="subnav-guru" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
-              <i class="fa-solid fa-chalkboard-user w-4 text-center text-emerald-400"></i> <span>Data Guru</span>
-            </button>
-            <button onclick="switchAdminSub('kelas')" id="subnav-kelas" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
-              <i class="fa-solid fa-school w-4 text-center text-blue-400"></i> <span>Data Kelas</span>
-            </button>
-            <button onclick="switchAdminSub('prestasi')" id="subnav-prestasi" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
-              <i class="fa-solid fa-trophy w-4 text-center text-amber-400"></i> <span>Prestasi Siswa</span>
-            </button>
-            <button onclick="switchAdminSub('catatan')" id="subnav-catatan" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
-              <i class="fa-solid fa-clipboard-user w-4 text-center text-rose-400"></i> <span>Pelanggaran</span>
-            </button>
-            <button onclick="switchAdminSub('jenis')" id="subnav-jenis" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
-              <i class="fa-solid fa-list-check w-4 text-center text-purple-400"></i> <span>Jenis Pelanggaran</span>
-            </button>
-            <button onclick="switchAdminSub('konseling')" id="subnav-konseling" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
-              <i class="fa-solid fa-hands-holding-child w-4 text-center text-sky-400"></i> <span>Layanan Konseling</span>
-            </button>
-            <button onclick="switchAdminSub('users')" id="subnav-users" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
-              <i class="fa-solid fa-users-gear w-4 text-center text-cyan-400"></i> <span>User Management</span>
-            </button>
-            <button onclick="switchAdminSub('pengaturan')" id="subnav-pengaturan" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
-              <i class="fa-solid fa-sliders w-4 text-center text-orange-400"></i> <span>Pengaturan Sistem</span>
-            </button>
-            <button onclick="switchAdminSub('web')" id="subnav-web" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
-              <i class="fa-solid fa-globe w-4 text-center text-teal-400"></i> <span>Web Sekolah & CMS</span>
-            </button>
-            <button onclick="switchAdminSub('wa')" id="subnav-wa" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
-              <i class="fa-brands fa-whatsapp w-4 text-center text-emerald-400"></i> <span>WhatsApp Gateway</span>
-            </button>
-            <button onclick="switchAdminSub('migrasi')" id="subnav-migrasi" class="w-full px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5 text-left">
-              <i class="fa-solid fa-database w-4 text-center text-violet-400"></i> <span>Migrasi Database</span>
-            </button>
-          </nav>
-
-          <div class="border-t border-white/10 pt-2">
-            <button onclick="adminLogout()" class="w-full px-3 py-2 rounded-xl text-rose-300 hover:text-white hover:bg-rose-600/30 transition flex items-center gap-2 text-xs font-semibold">
-              <i class="fa-solid fa-right-from-bracket w-4 text-center"></i> <span>Keluar Admin</span>
+          <div class="border-t border-white/10 pt-2 shrink-0">
+            <button onclick="adminLogout()" class="sidebar-btn w-full px-3 py-2 rounded-xl text-rose-300 hover:text-white hover:bg-rose-600/30 transition flex items-center gap-2 text-xs font-semibold">
+              <i class="fa-solid fa-right-from-bracket w-5 text-center text-xs shrink-0"></i>
+              <span class="sidebar-text truncate">Keluar Admin</span>
             </button>
           </div>
         </aside>
 
-        <!-- KONTEN UTAMA SUBMENU ADMIN (SEBELAH KANAN SIDEBAR) -->
-        <div class="flex-grow w-full space-y-6">
+        <!-- KONTEN UTAMA SUBMENU ADMIN (SEBELAH KANAN SIDEBAR - FULL WIDTH SESUAI POIN 2) -->
+        <div class="flex-1 min-w-0 w-full space-y-6">
 
       <!-- 0. SUBMENU DASHBOARD ADMIN -->
       <div id="admin-sub-dashboard" class="space-y-6">
@@ -415,22 +517,35 @@
             <p class="text-xs text-slate-500 mt-2 text-center">Arahkan QR Code / Barcode pada Kartu Pelajar ke kotak kamera di atas.</p>
           </div>
 
-          <!-- Wajah View -->
+          <!-- Wajah View (Deteksi Otomatis Sesuai Rekam Wajah - POIN 6) -->
           <div id="presensiSiswaWajahView" class="hidden flex flex-col items-center space-y-3">
-            <div class="relative w-full max-w-md aspect-video bg-black rounded-2xl overflow-hidden shadow">
+            <div class="relative w-full max-w-md aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-inner">
               <video id="videoPresensiSiswa" autoplay playsinline class="w-full h-full object-cover"></video>
               <canvas id="canvasPresensiSiswa" class="hidden"></canvas>
-              <div class="absolute inset-0 border-2 border-dashed border-pink-400/70 rounded-2xl pointer-events-none m-4 flex items-center justify-center">
-                <span class="text-white/60 text-xs bg-black/40 px-3 py-1 rounded-full">Posisikan Wajah Siswa di Sini</span>
+              
+              <!-- Frame Oval & Garis Pemindai Animasi -->
+              <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div class="w-40 h-52 border-2 border-dashed border-indigo-400 rounded-full shadow-lg relative">
+                  <div class="face-scanner-line"></div>
+                </div>
+              </div>
+
+              <!-- HUD Indikator Auto Detect -->
+              <div class="absolute top-3 left-3 right-3 flex justify-between items-center pointer-events-none">
+                <span class="bg-slate-900/80 backdrop-blur text-indigo-300 border border-indigo-400/40 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Auto Face Scanner Aktif
+                </span>
+                <span id="siswaFaceDetectCount" class="bg-black/60 text-white text-[10px] font-mono px-2 py-0.5 rounded">Standby</span>
               </div>
             </div>
-            <div class="flex items-center gap-2 w-full max-w-md">
-              <select id="selectSiswaWajah" class="flex-grow p-2.5 border rounded-xl text-xs bg-white font-medium focus:ring-2 focus:ring-indigo-300">
-                <option value="">-- Deteksi Wajah Otomatis / Pilih Siswa --</option>
-              </select>
-              <button onclick="capturePresensiSiswaWajah()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow flex items-center gap-1.5 shrink-0">
-                <i class="fa-solid fa-camera"></i> Absen Wajah
-              </button>
+
+            <!-- Status Bar Deteksi Otomatis -->
+            <div id="siswaFaceDetectStatusBox" class="w-full max-w-md bg-indigo-50/80 border border-indigo-200 rounded-xl p-3 text-xs flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-expand text-indigo-600 animate-pulse text-sm"></i>
+                <span id="siswaFaceDetectStatusText" class="font-semibold text-indigo-900">Arahkan wajah ke lingkaran. Sistem mendeteksi otomatis...</span>
+              </div>
+              <span class="bg-indigo-600 text-white font-extrabold px-2 py-0.5 rounded text-[10px] shrink-0">AUTO</span>
             </div>
           </div>
 
@@ -560,21 +675,35 @@
             <p class="text-xs text-slate-500 mt-2 text-center">Arahkan QR Code ID Card Guru ke kamera di atas.</p>
           </div>
 
+          <!-- Wajah View (Deteksi Otomatis Sesuai Rekam Wajah - POIN 6) -->
           <div id="presensiGuruWajahView" class="hidden flex flex-col items-center space-y-3">
-            <div class="relative w-full max-w-md aspect-video bg-black rounded-2xl overflow-hidden shadow">
+            <div class="relative w-full max-w-md aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-inner">
               <video id="videoPresensiGuru" autoplay playsinline class="w-full h-full object-cover"></video>
               <canvas id="canvasPresensiGuru" class="hidden"></canvas>
-              <div class="absolute inset-0 border-2 border-dashed border-teal-400/70 rounded-2xl pointer-events-none m-4 flex items-center justify-center">
-                <span class="text-white/60 text-xs bg-black/40 px-3 py-1 rounded-full">Posisikan Wajah Guru di Sini</span>
+              
+              <!-- Frame Oval & Garis Pemindai Animasi -->
+              <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div class="w-40 h-52 border-2 border-dashed border-teal-400 rounded-full shadow-lg relative">
+                  <div class="face-scanner-line"></div>
+                </div>
+              </div>
+
+              <!-- HUD Indikator Auto Detect -->
+              <div class="absolute top-3 left-3 right-3 flex justify-between items-center pointer-events-none">
+                <span class="bg-slate-900/80 backdrop-blur text-teal-300 border border-teal-400/40 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Auto Face Scanner Guru Aktif
+                </span>
+                <span id="guruFaceDetectCount" class="bg-black/60 text-white text-[10px] font-mono px-2 py-0.5 rounded">Standby</span>
               </div>
             </div>
-            <div class="flex items-center gap-2 w-full max-w-md">
-              <select id="selectGuruWajah" class="flex-grow p-2.5 border rounded-xl text-xs bg-white font-medium focus:ring-2 focus:ring-teal-300">
-                <option value="">-- Deteksi Wajah Otomatis / Pilih Guru --</option>
-              </select>
-              <button onclick="capturePresensiGuruWajah()" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow flex items-center gap-1.5 shrink-0">
-                <i class="fa-solid fa-camera"></i> Absen Wajah
-              </button>
+
+            <!-- Status Bar Deteksi Otomatis -->
+            <div id="guruFaceDetectStatusBox" class="w-full max-w-md bg-teal-50/80 border border-teal-200 rounded-xl p-3 text-xs flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-expand text-teal-600 animate-pulse text-sm"></i>
+                <span id="guruFaceDetectStatusText" class="font-semibold text-teal-900">Arahkan wajah ke lingkaran. Sistem mendeteksi otomatis...</span>
+              </div>
+              <span class="bg-teal-600 text-white font-extrabold px-2 py-0.5 rounded text-[10px] shrink-0">AUTO</span>
             </div>
           </div>
 
@@ -2775,6 +2904,65 @@
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeResetPasswordModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
           <button type="submit" class="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-medium shadow">Simpan Password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL PROFIL PENDIDIK CMS (POIN 8: OTOMATIS AMBIL DARI DATA GURU) -->
+  <div id="modalStaffWeb" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <div>
+          <h3 id="staffModalTitle" class="text-base font-bold text-slate-800">Tambah Profil Pendidik</h3>
+          <p class="text-xs text-slate-500">Pilih dari Data Guru untuk pengisian instan otomatis.</p>
+        </div>
+        <button type="button" onclick="closeStaffModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+      </div>
+
+      <form onsubmit="handleStaffFormSubmit(event)" class="space-y-3 text-xs sm:text-sm">
+        <input type="hidden" id="staffRowId">
+
+        <!-- Selector Sumber Data Guru Otomatis -->
+        <div class="bg-indigo-50/80 p-3 rounded-2xl border border-indigo-100 space-y-1">
+          <label class="block font-bold text-indigo-900 text-xs"><i class="fa-solid fa-wand-magic-sparkles mr-1 text-amber-500"></i> Ambil Otomatis Dari Data Guru:</label>
+          <select id="staffSelectGuru" onchange="onStaffGuruSelectChange()" class="w-full p-2 border rounded-xl bg-white font-medium text-xs">
+            <option value="">-- Pilih Guru dari Database --</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1">Nama Guru / Pendidik</label>
+          <input type="text" id="staffInputNama" required placeholder="Nama lengkap..." class="w-full p-2.5 border rounded-xl">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold mb-1">NIP</label>
+            <input type="text" id="staffInputNip" placeholder="NIP..." class="w-full p-2.5 border rounded-xl">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Jabatan</label>
+            <input type="text" id="staffInputJabatan" placeholder="Jabatan..." class="w-full p-2.5 border rounded-xl">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1">Foto Pendidik</label>
+          <div class="flex items-center gap-3">
+            <img id="staffFotoPreview" src="https://cdn-icons-png.flaticon.com/512/3135/3135768.png" class="w-12 h-12 rounded-full border object-cover bg-slate-100 shrink-0" alt="Preview">
+            <div class="flex-grow space-y-1">
+              <input type="text" id="staffInputFotoUrl" placeholder="URL Foto..." class="w-full p-2 border rounded-xl text-xs">
+              <input type="file" id="staffInputFotoFile" accept="image/*" class="w-full text-xs text-slate-500" onchange="previewStaffLocalPhoto(this)">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeStaffModal()" class="px-4 py-2 border rounded-xl font-medium">Batal</button>
+          <button type="submit" id="btnSaveStaff" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow flex items-center gap-1.5">
+            <i class="fa-solid fa-floppy-disk"></i> Simpan Profil Pendidik
+          </button>
         </div>
       </form>
     </div>

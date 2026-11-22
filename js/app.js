@@ -86,6 +86,15 @@ function checkStoredSessions() {
   const savedTheme = localStorage.getItem('spilsa_theme_preset') || 'indigo';
   applyThemePreset(savedTheme, false);
 
+  // Restore Sidebar Collapsed state (Desktop - POIN 3)
+  if (localStorage.getItem('spilsa_sidebar_collapsed') === '1') {
+    isSidebarCollapsed = true;
+    const sidebar = document.getElementById('adminSidebar');
+    const icon = document.getElementById('btnCollapseSidebarIcon');
+    if (sidebar) sidebar.classList.add('is-collapsed');
+    if (icon) icon.className = 'fa-solid fa-angles-right text-xs';
+  }
+
   updateHeaderAuthUI();
 
   // Restore active view without being forced to login (POIN 13)
@@ -312,8 +321,63 @@ function switchTab(tab) {
   }
 }
 
+// ============================================
+// 4. ROUTER TABS & SIDEBAR (POIN 3, 4, 5, 10)
+// ============================================
+let isSidebarCollapsed = false;
+
+function toggleAdminSidebarCollapse() {
+  const sidebar = document.getElementById('adminSidebar');
+  const icon = document.getElementById('btnCollapseSidebarIcon');
+  if (!sidebar) return;
+
+  isSidebarCollapsed = !isSidebarCollapsed;
+  if (isSidebarCollapsed) {
+    sidebar.classList.add('is-collapsed');
+    if (icon) icon.className = 'fa-solid fa-angles-right text-xs';
+  } else {
+    sidebar.classList.remove('is-collapsed');
+    if (icon) icon.className = 'fa-solid fa-angles-left text-xs';
+  }
+  localStorage.setItem('spilsa_sidebar_collapsed', isSidebarCollapsed ? '1' : '0');
+}
+
+function toggleMobileSidebar(forceState) {
+  const sidebar = document.getElementById('adminSidebar');
+  const backdrop = document.getElementById('adminSidebarBackdrop');
+  if (!sidebar) return;
+
+  const isOpen = !sidebar.classList.contains('-translate-x-full');
+  const newState = (forceState !== undefined) ? forceState : !isOpen;
+
+  if (newState) {
+    sidebar.classList.remove('-translate-x-full');
+    if (backdrop) backdrop.classList.remove('hidden');
+  } else {
+    sidebar.classList.add('-translate-x-full');
+    if (backdrop) backdrop.classList.add('hidden');
+  }
+}
+
+function toggleSidebarGroup(groupName) {
+  const sub = document.getElementById(`group-${groupName}-sub`);
+  const arrow = document.getElementById(`group-${groupName}-arrow`);
+  if (!sub) return;
+
+  const isHidden = sub.classList.contains('hidden');
+  if (isHidden) {
+    sub.classList.remove('hidden');
+    if (arrow) arrow.style.transform = 'rotate(180deg)';
+  } else {
+    sub.classList.add('hidden');
+    if (arrow) arrow.style.transform = 'rotate(0deg)';
+  }
+}
+
 function switchAdminSub(sub) {
   stopAllCameraStreams();
+  toggleMobileSidebar(false); // Tutup drawer mobile secara otomatis
+
   const allSubmenus = [
     'dashboard', 'presensi-siswa', 'presensi-guru', 'approval-izin', 
     'web', 'siswa', 'guru', 'kelas', 'prestasi', 'konseling', 
@@ -324,13 +388,37 @@ function switchAdminSub(sub) {
     const el = document.getElementById('admin-sub-' + s);
     if (el) el.classList.add('hidden');
     const btn = document.getElementById('subnav-' + s);
-    if (btn) btn.className = "w-full text-left px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition flex items-center gap-2.5";
+    if (btn) {
+      btn.classList.remove('bg-indigo-600', 'text-white', 'shadow');
+      btn.classList.add('text-slate-300');
+    }
   });
+
+  // Otomatis buka group accordion induk jika item berada di dalam submenu (POIN 4)
+  if (['siswa', 'guru', 'kelas'].includes(sub)) {
+    const subGrp = document.getElementById('group-master-sub');
+    const arr = document.getElementById('group-master-arrow');
+    if (subGrp) subGrp.classList.remove('hidden');
+    if (arr) arr.style.transform = 'rotate(180deg)';
+  } else if (['presensi-siswa', 'presensi-guru', 'approval-izin'].includes(sub)) {
+    const subGrp = document.getElementById('group-presensi-sub');
+    const arr = document.getElementById('group-presensi-arrow');
+    if (subGrp) subGrp.classList.remove('hidden');
+    if (arr) arr.style.transform = 'rotate(180deg)';
+  } else if (['catatan', 'jenis'].includes(sub)) {
+    const subGrp = document.getElementById('group-pelanggaran-sub');
+    const arr = document.getElementById('group-pelanggaran-arrow');
+    if (subGrp) subGrp.classList.remove('hidden');
+    if (arr) arr.style.transform = 'rotate(180deg)';
+  }
 
   const activeEl = document.getElementById('admin-sub-' + sub);
   if (activeEl) activeEl.classList.remove('hidden');
   const activeBtn = document.getElementById('subnav-' + sub);
-  if (activeBtn) activeBtn.className = "w-full text-left px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold bg-indigo-600 text-white shadow transition flex items-center gap-2.5";
+  if (activeBtn) {
+    activeBtn.classList.remove('text-slate-300');
+    activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow');
+  }
 
   localStorage.setItem('spilsa_active_subtab', sub);
 
@@ -340,6 +428,7 @@ function switchAdminSub(sub) {
   else if (sub === 'users') renderUsersTable();
   else if (sub === 'pengaturan') loadPengaturanForm();
   else if (sub === 'wa') loadWAStatusAdmin();
+  else if (sub === 'web') renderStaffTable();
 }
 
 function switchWebSub(sub) {
@@ -1058,13 +1147,214 @@ function initPresensiSiswaBarcodeScanner() {
   });
 }
 
+// ============================================
+// MODUL AUTO FACE ATTENDANCE (POIN 6)
+// ============================================
+let autoFaceScanInterval = null;
+let lastDetectedFaceKey = null;
+let lastDetectedFaceTime = 0;
+let isProcessingFaceAttendance = false;
+
+function extractFaceVector_(ctx, w, h) {
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const data = imgData.data;
+  const vector = [];
+  const totalPixels = Math.floor(data.length / 4);
+  const step = Math.max(1, Math.floor(totalPixels / 64));
+  for (let i = 0; i < 64; i++) {
+    const idx = (i * step) * 4;
+    const r = data[idx] || 0;
+    const g = data[idx + 1] || 0;
+    const b = data[idx + 2] || 0;
+    const lum = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+    vector.push(lum);
+  }
+  return vector;
+}
+
+function compareFaceVectors_(vecA, vecB) {
+  if (!vecA || !vecB || vecA.length === 0 || vecB.length === 0) return 999999;
+  const len = Math.min(vecA.length, vecB.length);
+  let sumSq = 0;
+  for (let i = 0; i < len; i++) {
+    const diff = (vecA[i] || 0) - (vecB[i] || 0);
+    sumSq += diff * diff;
+  }
+  return Math.sqrt(sumSq / len);
+}
+
+function startAutoFaceAttendance(role) {
+  stopAutoFaceAttendance();
+  const alertEl = (role === 'siswa') 
+    ? document.getElementById('presensiSiswaScanAlert') 
+    : document.getElementById('presensiGuruScanAlert');
+
+  if (alertEl) {
+    alertEl.className = "p-3 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 block transition border border-indigo-200 text-center";
+    alertEl.innerHTML = `<i class="fa-solid fa-camera mr-1.5 animate-pulse text-indigo-600"></i> Mode Scan Wajah Otomatis Aktif. Posisikan wajah Anda pada lingkaran kamera...`;
+  }
+
+  autoFaceScanInterval = setInterval(() => {
+    scanLiveFaceFrame(role);
+  }, 750);
+}
+
+function stopAutoFaceAttendance() {
+  if (autoFaceScanInterval) {
+    clearInterval(autoFaceScanInterval);
+    autoFaceScanInterval = null;
+  }
+  isProcessingFaceAttendance = false;
+}
+
+async function scanLiveFaceFrame(role) {
+  if (isProcessingFaceAttendance) return;
+  const isSiswa = (role === 'siswa');
+  const video = isSiswa ? document.getElementById('videoPresensiSiswa') : document.getElementById('videoPresensiGuru');
+  const canvas = isSiswa ? document.getElementById('canvasPresensiSiswa') : document.getElementById('canvasPresensiGuru');
+
+  if (!video || !canvas || video.readyState < 2) return;
+
+  const width = 240;
+  const height = 180;
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, width, height);
+
+  const targetRoleStr = isSiswa ? 'Siswa' : 'Guru';
+  const registeredFaces = (appState.rekamWajah || []).filter(r => r.role === targetRoleStr && r.descriptor);
+
+  if (registeredFaces.length === 0) {
+    const alertEl = isSiswa ? document.getElementById('presensiSiswaScanAlert') : document.getElementById('presensiGuruScanAlert');
+    if (alertEl) {
+      alertEl.className = "p-3 rounded-xl text-xs font-bold bg-amber-50 text-amber-800 block border border-amber-200 text-center";
+      alertEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1.5"></i> Belum ada data Rekam Wajah ${targetRoleStr} yang terdaftar. Rekam wajah terlebih dahulu di menu admin.`;
+    }
+    return;
+  }
+
+  const liveVector = extractFaceVector_(ctx, width, height);
+
+  let bestMatch = null;
+  let minDistance = 999999;
+
+  for (const reg of registeredFaces) {
+    try {
+      const regVector = reg.descriptor.split(',').map(Number);
+      const dist = compareFaceVectors_(liveVector, regVector);
+      if (dist < minDistance) {
+        minDistance = dist;
+        bestMatch = reg;
+      }
+    } catch(e){}
+  }
+
+  const MATCH_THRESHOLD = 45;
+
+  if (bestMatch && minDistance <= MATCH_THRESHOLD) {
+    const now = Date.now();
+    const candidateId = bestMatch.targetId.toString();
+
+    if (lastDetectedFaceKey === candidateId && (now - lastDetectedFaceTime) < 6000) {
+      return;
+    }
+
+    isProcessingFaceAttendance = true;
+    lastDetectedFaceKey = candidateId;
+    lastDetectedFaceTime = now;
+
+    playBeepSound();
+
+    const nowDate = new Date();
+    const tglStr = nowDate.toISOString().split('T')[0];
+    const jamStr = nowDate.toTimeString().split(' ')[0].substring(0, 5);
+    const batasTerlambat = appState.pengaturan?.toleransiTerlambat || '07:15';
+    const statusKehadiran = (jamStr > batasTerlambat) ? 'Terlambat' : 'Hadir';
+
+    const alertEl = isSiswa ? document.getElementById('presensiSiswaScanAlert') : document.getElementById('presensiGuruScanAlert');
+    if (alertEl) {
+      alertEl.className = "p-3 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 block border border-emerald-300 text-center shadow";
+      alertEl.innerHTML = `✅ <b>Wajah Terdeteksi:</b> ${bestMatch.targetName} (${statusKehadiran} pk. ${jamStr}) - Menyimpan presensi...`;
+    }
+
+    const fotoWajahData = canvas.toDataURL('image/jpeg', 0.6);
+
+    try {
+      if (isSiswa) {
+        const student = (appState.students || []).find(s => s.nisn.toString() === candidateId) || {
+          nisn: candidateId,
+          nama: bestMatch.targetName,
+          rombel: 'Siswa'
+        };
+
+        const payload = {
+          tanggal: tglStr,
+          jam: jamStr,
+          nisn: student.nisn,
+          nama: student.nama,
+          kelas: student.rombel,
+          status: statusKehadiran,
+          metode: 'Scan Wajah Otomatis',
+          keterangan: `Presensi Kamera Wajah Otomatis (${statusKehadiran})`,
+          fotoWajahBase64: fotoWajahData
+        };
+
+        const res = await apiPost('presensi.recordSiswa', payload);
+        if (alertEl) {
+          alertEl.innerHTML = `🎉 <b>Berhasil:</b> ${student.nama} (${student.rombel}) tercatat <b>${statusKehadiran}</b> pk. ${jamStr}!`;
+        }
+      } else {
+        const teacher = (appState.teachers || []).find(t => (t.nip && t.nip.toString() === candidateId) || t.namaGuru === candidateId) || {
+          nip: candidateId,
+          namaGuru: bestMatch.targetName,
+          jabatan: 'Dewan Guru'
+        };
+
+        const payload = {
+          tanggal: tglStr,
+          jam: jamStr,
+          nip: teacher.nip || '-',
+          namaGuru: teacher.namaGuru,
+          jabatan: teacher.jabatan || 'Dewan Guru',
+          status: statusKehadiran,
+          metode: 'Scan Wajah Otomatis',
+          keterangan: `Presensi Kamera Wajah Otomatis (${statusKehadiran})`,
+          fotoWajahBase64: fotoWajahData
+        };
+
+        const res = await apiPost('presensi.recordGuru', payload);
+        if (alertEl) {
+          alertEl.innerHTML = `🎉 <b>Berhasil:</b> ${teacher.namaGuru} tercatat <b>${statusKehadiran}</b> pk. ${jamStr}!`;
+        }
+      }
+
+      loadDataSWR(true);
+    } catch(err) {
+      console.warn('Gagal mencatat presensi wajah otomatis:', err);
+    } finally {
+      setTimeout(() => {
+        isProcessingFaceAttendance = false;
+        if (alertEl) {
+          alertEl.className = "p-3 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 block transition border border-indigo-200 text-center";
+          alertEl.innerHTML = `<i class="fa-solid fa-camera mr-1.5 animate-pulse text-indigo-600"></i> Mode Scan Wajah Otomatis Aktif. Posisikan wajah berikutnya...`;
+        }
+      }, 2500);
+    }
+  }
+}
+
 function initPresensiSiswaWajahCamera() {
   const video = document.getElementById('videoPresensiSiswa');
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } })
       .then(stream => {
         videoStreamSiswa = stream;
         video.srcObject = stream;
+        video.onloadedmetadata = () => {
+          video.play();
+          startAutoFaceAttendance('siswa');
+        };
       })
       .catch(err => {
         alert('Tidak dapat mengakses webcam: ' + err.message);
@@ -1073,50 +1363,7 @@ function initPresensiSiswaWajahCamera() {
 }
 
 async function capturePresensiSiswaWajah() {
-  const nisn = document.getElementById('selectSiswaWajah').value;
-  if (!nisn) { alert('Silakan pilih siswa terlebih dahulu.'); return; }
-  const siswa = appState.students.find(s => s.nisn.toString() === nisn);
-  if (!siswa) return;
-
-  const video = document.getElementById('videoPresensiSiswa');
-  const canvas = document.getElementById('canvasPresensiSiswa');
-  canvas.width = 400;
-  canvas.height = 300;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, 400, 300);
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-
-  const now = new Date();
-  const tglStr = now.toISOString().split('T')[0];
-  const jamStr = now.toTimeString().split(' ')[0].substring(0, 5);
-
-  const batasTerlambat = appState.pengaturan?.toleransiTerlambat || '07:15';
-  let status = 'Hadir';
-  if (jamStr > batasTerlambat) {
-    status = 'Terlambat';
-  }
-
-  const payload = {
-    tanggal: tglStr,
-    jam: jamStr,
-    nisn: siswa.nisn,
-    nama: siswa.nama,
-    kelas: siswa.rombel,
-    status: status,
-    metode: 'Scan Wajah',
-    keterangan: `Presensi Kamera Wajah Sekolah (${status})`,
-    fotoWajahBase64: dataUrl
-  };
-
-  playBeepSound();
-  showPresensiSiswaAlert(`Menyimpan presensi wajah ${siswa.nama}...`, 'info');
-  const res = await apiPost('presensi.recordSiswa', payload);
-  if (res.success) {
-    showPresensiSiswaAlert(`Presensi Wajah Berhasil: ${siswa.nama} ${status} pk. ${jamStr}!`, 'success');
-    loadDataSWR(true);
-  } else {
-    showPresensiSiswaAlert('Gagal: ' + res.message, 'error');
-  }
+  scanLiveFaceFrame('siswa');
 }
 
 function showPresensiSiswaAlert(msg, type) {
@@ -1350,10 +1597,14 @@ function initPresensiGuruBarcodeScanner() {
 function initPresensiGuruWajahCamera() {
   const video = document.getElementById('videoPresensiGuru');
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } })
       .then(stream => {
         videoStreamGuru = stream;
         video.srcObject = stream;
+        video.onloadedmetadata = () => {
+          video.play();
+          startAutoFaceAttendance('guru');
+        };
       })
       .catch(err => {
         alert('Tidak dapat mengakses webcam: ' + err.message);
@@ -1362,50 +1613,7 @@ function initPresensiGuruWajahCamera() {
 }
 
 async function capturePresensiGuruWajah() {
-  const idKey = document.getElementById('selectGuruWajah').value;
-  if (!idKey) { alert('Silakan pilih guru terlebih dahulu.'); return; }
-  const guru = appState.teachers.find(t => (t.nip && t.nip.toString() === idKey) || t.namaGuru === idKey);
-  if (!guru) return;
-
-  const video = document.getElementById('videoPresensiGuru');
-  const canvas = document.getElementById('canvasPresensiGuru');
-  canvas.width = 400;
-  canvas.height = 300;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, 400, 300);
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-
-  const now = new Date();
-  const tglStr = now.toISOString().split('T')[0];
-  const jamStr = now.toTimeString().split(' ')[0].substring(0, 5);
-
-  const batasTerlambat = appState.pengaturan?.toleransiTerlambat || '07:15';
-  let status = 'Hadir';
-  if (jamStr > batasTerlambat) {
-    status = 'Terlambat';
-  }
-
-  const payload = {
-    tanggal: tglStr,
-    jam: jamStr,
-    nip: guru.nip || '-',
-    namaGuru: guru.namaGuru,
-    jabatan: guru.jabatan,
-    status: status,
-    metode: 'Scan Wajah',
-    keterangan: `Presensi Kamera Wajah Guru (${status})`,
-    fotoWajahBase64: dataUrl
-  };
-
-  playBeepSound();
-  showPresensiGuruAlert(`Menyimpan presensi guru ${guru.namaGuru}...`, 'info');
-  const res = await apiPost('presensi.recordGuru', payload);
-  if (res.success) {
-    showPresensiGuruAlert(`Presensi Berhasil: ${guru.namaGuru} ${status} pk. ${jamStr}!`, 'success');
-    loadDataSWR(true);
-  } else {
-    showPresensiGuruAlert('Gagal: ' + res.message, 'error');
-  }
+  scanLiveFaceFrame('guru');
 }
 
 function showPresensiGuruAlert(msg, type) {
@@ -1985,71 +2193,106 @@ async function handleEksekusiMigrasiNyata() {
 }
 
 // ============================================
-// 12. EXCEL TEMPLATE GENERATORS (SheetJS)
+// 12. EXCEL TEMPLATE GENERATORS (POIN 1 - 100% RELIABLE DUAL ENGINE)
 // ============================================
+function escapeXmlData_(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function triggerBrowserDownloadFile_(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    try {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch(e){}
+  }, 1200);
+}
+
+function downloadExcelFileHelper(filename, sheetName, headers, sampleRow) {
+  // Engine 1: Gunakan SheetJS jika terpasang & berfungsi
+  if (typeof XLSX !== 'undefined' && XLSX.utils && XLSX.write) {
+    try {
+      const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const finalXlsxName = filename.endsWith('.xlsx') ? filename : filename + '.xlsx';
+      triggerBrowserDownloadFile_(blob, finalXlsxName);
+      return;
+    } catch (err) {
+      console.warn('SheetJS gagal, beralih otomatis ke Native Excel Spreadsheet XML:', err);
+    }
+  }
+
+  // Engine 2: Native Excel Spreadsheet XML (Zero Dependency - 100% Berhasil & Buka Langsung di Excel/WPS/Sheets)
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Worksheet ss:Name="${escapeXmlData_(sheetName)}">
+  <Table>
+   <Row>`;
+  headers.forEach(h => {
+    xml += `<Cell><Data ss:Type="String">${escapeXmlData_(h)}</Data></Cell>`;
+  });
+  xml += `</Row><Row>`;
+  sampleRow.forEach(c => {
+    xml += `<Cell><Data ss:Type="String">${escapeXmlData_(c)}</Data></Cell>`;
+  });
+  xml += `</Row>
+  </Table>
+ </Worksheet>
+</Workbook>`;
+
+  const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const finalXlsName = filename.replace(/\.xlsx$/i, '') + '.xls';
+  triggerBrowserDownloadFile_(blob, finalXlsName);
+}
+
 function downloadStudentTemplate() {
-  const headers = [
-    ["Nama", "NISN", "NIPD", "Jenis Kelamin", "Tempat Lahir", "Tanggal Lahir", "NIK", "Agama", "Rombel", "Alamat", "Nomor HP", "Nama Ayah", "Nama Ibu", "Sekolah Asal", "Anak Ke", "Jumlah Saudara"]
-  ];
-  const sample = [
-    ["Ahmad Fauzi", "0081234567", "1001", "L", "Demak", "2015-05-12", "3321010000000001", "Islam", "Kelas 1", "Ds. Pilangrejo RT 01 RW 01", "081234567890", "Budi Santoso", "Siti Aminah", "TK Pertiwi", "1", "2"]
-  ];
-  const ws = XLSX.utils.aoa_to_sheet([...headers, ...sample]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Data Siswa");
-  XLSX.writeFile(wb, "Template_Import_Siswa.xlsx");
+  const headers = ["Nama", "NISN", "NIPD", "Jenis Kelamin", "Tempat Lahir", "Tanggal Lahir", "NIK", "Agama", "Rombel", "Alamat", "Nomor HP", "Nama Ayah", "Nama Ibu", "Sekolah Asal", "Anak Ke", "Jumlah Saudara"];
+  const sample = ["Ahmad Fauzi", "0081234567", "1001", "L", "Demak", "2015-05-12", "3321010000000001", "Islam", "Kelas 1", "Ds. Pilangrejo RT 01 RW 01", "081234567890", "Budi Santoso", "Siti Aminah", "TK Pertiwi", "1", "2"];
+  downloadExcelFileHelper("Template_Import_Siswa.xlsx", "Data Siswa", headers, sample);
 }
 
 function downloadTeacherTemplate() {
-  const headers = [
-    ["NIP", "Nama Guru", "Tempat Lahir", "Tanggal Lahir", "NIK", "Jabatan", "Nomor HP", "Email", "Alamat Rumah", "Jumlah Anak", "TMT CPNS", "TMT PNS", "NUPTK", "Pendidikan Terakhir"]
-  ];
-  const sample = [
-    ["198501012010011001", "Budi Santoso, S.Pd.", "Demak", "1985-01-01", "3321010000000002", "Guru Kelas", "081234567891", "guru@sekolah.sch.id", "Demak", "2", "2010-01-01", "2011-01-01", "1234567890123456", "S1 PGSD"]
-  ];
-  const ws = XLSX.utils.aoa_to_sheet([...headers, ...sample]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Data Guru");
-  XLSX.writeFile(wb, "Template_Import_Guru.xlsx");
+  const headers = ["NIP", "Nama Guru", "Tempat Lahir", "Tanggal Lahir", "NIK", "Jabatan", "Nomor HP", "Email", "Alamat Rumah", "Jumlah Anak", "TMT CPNS", "TMT PNS", "NUPTK", "Pendidikan Terakhir"];
+  const sample = ["198501012010011001", "Budi Santoso, S.Pd.", "Demak", "1985-01-01", "3321010000000002", "Guru Kelas", "081234567891", "guru@sekolah.sch.id", "Demak", "2", "2010-01-01", "2011-01-01", "1234567890123456", "S1 PGSD"];
+  downloadExcelFileHelper("Template_Import_Guru.xlsx", "Data Guru", headers, sample);
 }
 
 function downloadPrestasiTemplate() {
-  const headers = [
-    ["Tanggal", "Nama Siswa", "Kelas", "Jenis Prestasi", "Nama Lomba", "Juara", "Tingkat", "Penyelenggara"]
-  ];
-  const sample = [
-    ["2026-02-15", "Ahmad Fauzi", "Kelas 4", "Akademik", "Olimpiade Sains Matematika", "Juara 1", "Kabupaten/Kota", "Dinas Pendidikan"]
-  ];
-  const ws = XLSX.utils.aoa_to_sheet([...headers, ...sample]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Data Prestasi");
-  XLSX.writeFile(wb, "Template_Import_Prestasi.xlsx");
+  const headers = ["Tanggal", "Nama Siswa", "Kelas", "Jenis Prestasi", "Nama Lomba", "Juara", "Tingkat", "Penyelenggara"];
+  const sample = ["2026-02-15", "Ahmad Fauzi", "Kelas 4", "Akademik", "Olimpiade Sains Matematika", "Juara 1", "Kabupaten/Kota", "Dinas Pendidikan"];
+  downloadExcelFileHelper("Template_Import_Prestasi.xlsx", "Data Prestasi", headers, sample);
 }
 
 function downloadCatatanTemplate() {
-  const headers = [
-    ["Tanggal", "Nama Siswa", "Kelas", "NIPD", "NISN", "Kategori Pelanggaran", "Jenis Pelanggaran", "Poin Pelanggaran", "Tindak Lanjut", "Guru Pendamping", "Keterangan"]
-  ];
-  const sample = [
-    ["2026-02-20", "Ahmad Fauzi", "Kelas 4", "1001", "0081234567", "Ringan", "Terlambat Masuk Sekolah", "5", "Teguran lisan & pembinaan", "Budi Santoso, S.Pd.", "Selesai"]
-  ];
-  const ws = XLSX.utils.aoa_to_sheet([...headers, ...sample]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Catatan Pelanggaran");
-  XLSX.writeFile(wb, "Template_Import_Pelanggaran.xlsx");
+  const headers = ["Tanggal", "Nama Siswa", "Kelas", "NIPD", "NISN", "Kategori Pelanggaran", "Jenis Pelanggaran", "Poin Pelanggaran", "Tindak Lanjut", "Guru Pendamping", "Keterangan"];
+  const sample = ["2026-02-20", "Ahmad Fauzi", "Kelas 4", "1001", "0081234567", "Ringan", "Terlambat Masuk Sekolah", "5", "Teguran lisan & pembinaan", "Budi Santoso, S.Pd.", "Selesai"];
+  downloadExcelFileHelper("Template_Import_Pelanggaran.xlsx", "Catatan Pelanggaran", headers, sample);
 }
 
 function downloadKonselingTemplate() {
-  const headers = [
-    ["Tanggal", "Nama Siswa", "Kelas", "NIPD", "NISN", "Permasalahan", "Jenis Layanan", "Rencana Tindak Lanjut", "Keterangan", "Guru Pendamping"]
-  ];
-  const sample = [
-    ["2026-02-22", "Ahmad Fauzi", "Kelas 4", "1001", "0081234567", "Kesulitan fokus saat belajar", "Belajar", "Konseling individual", "Proses", "Budi Santoso, S.Pd."]
-  ];
-  const ws = XLSX.utils.aoa_to_sheet([...headers, ...sample]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Data Konseling");
-  XLSX.writeFile(wb, "Template_Import_Konseling.xlsx");
+  const headers = ["Tanggal", "Nama Siswa", "Kelas", "NIPD", "NISN", "Permasalahan", "Jenis Layanan", "Rencana Tindak Lanjut", "Keterangan", "Guru Pendamping"];
+  const sample = ["2026-02-22", "Ahmad Fauzi", "Kelas 4", "1001", "0081234567", "Kesulitan fokus saat belajar", "Belajar", "Konseling individual", "Proses", "Budi Santoso, S.Pd."];
+  downloadExcelFileHelper("Template_Import_Konseling.xlsx", "Data Konseling", headers, sample);
 }
 
 function downloadPelanggaranTemplate() {
@@ -2325,6 +2568,7 @@ function playBeepSound() {
 }
 
 function stopAllCameraStreams() {
+  stopAutoFaceAttendance();
   if (html5QrScannerSiswa) {
     try { html5QrScannerSiswa.clear(); } catch(e){}
     html5QrScannerSiswa = null;
@@ -3394,21 +3638,143 @@ function renderStaffTable() {
   const tbody = document.getElementById('staffTableBody');
   if (!tbody) return;
   tbody.innerHTML = '';
+
+  if (!appState.teachers || appState.teachers.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">Belum ada data guru/staf di sistem.</td></tr>`;
+    return;
+  }
+
   appState.teachers.forEach((t, idx) => {
     const foto = t.fotoUrl || 'https://cdn-icons-png.flaticon.com/512/3135/3135768.png';
     tbody.innerHTML += `
-      <tr class="hover:bg-slate-50">
-        <td class="p-3">${idx + 1}</td>
-        <td class="p-3"><img src="${foto}" class="w-10 h-10 rounded-full object-cover border" alt="Foto"></td>
-        <td class="p-3 font-bold">${t.namaGuru}</td>
-        <td class="p-3 text-xs text-slate-500">${t.nip || '-'}</td>
-        <td class="p-3">${t.jabatan || '-'}</td>
+      <tr class="hover:bg-slate-50 transition">
+        <td class="p-3 text-slate-500 font-semibold">${idx + 1}</td>
+        <td class="p-3"><img src="${foto}" class="w-10 h-10 rounded-full object-cover border shadow-sm" alt="Foto"></td>
+        <td class="p-3 font-bold text-slate-800">${t.namaGuru}</td>
+        <td class="p-3 text-xs text-slate-500 font-mono">${t.nip || '-'}</td>
+        <td class="p-3 text-slate-700 font-medium">${t.jabatan || '-'}</td>
         <td class="p-3 text-center">
-          <span class="text-xs text-emerald-600 font-semibold"><i class="fa-solid fa-check"></i> Terhubung Data Guru</span>
+          <div class="flex items-center justify-center gap-1.5">
+            <button onclick="openStaffModal(${t.rowId})" class="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-xs" title="Edit Profil Pendidik"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button onclick="deleteStaff(${t.rowId})" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs" title="Hapus Profil Pendidik"><i class="fa-solid fa-trash"></i></button>
+          </div>
         </td>
       </tr>
     `;
   });
+}
+
+function populateStaffGuruDropdown() {
+  const sel = document.getElementById('staffSelectGuru');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">-- Pilih Guru dari Database --</option>';
+  (appState.teachers || []).forEach(g => {
+    sel.innerHTML += `<option value="${g.rowId}">${g.namaGuru} (NIP: ${g.nip || '-'})</option>`;
+  });
+}
+
+function openStaffModal(rowId = null) {
+  populateStaffGuruDropdown();
+  document.getElementById('staffRowId').value = rowId || '';
+  const form = document.querySelector('#modalStaffWeb form');
+  if (form) form.reset();
+
+  const preview = document.getElementById('staffFotoPreview');
+  if (rowId) {
+    const t = (appState.teachers || []).find(x => x.rowId == rowId);
+    if (t) {
+      document.getElementById('staffModalTitle').innerText = 'Edit Profil Pendidik';
+      document.getElementById('staffInputNama').value = t.namaGuru || '';
+      document.getElementById('staffInputNip').value = t.nip || '';
+      document.getElementById('staffInputJabatan').value = t.jabatan || '';
+      document.getElementById('staffInputFotoUrl').value = t.fotoUrl || '';
+      if (preview) preview.src = t.fotoUrl || 'https://cdn-icons-png.flaticon.com/512/3135/3135768.png';
+      document.getElementById('staffSelectGuru').value = t.rowId;
+    }
+  } else {
+    document.getElementById('staffModalTitle').innerText = 'Tambah Profil Pendidik';
+    if (preview) preview.src = 'https://cdn-icons-png.flaticon.com/512/3135/3135768.png';
+  }
+
+  const modal = document.getElementById('modalStaffWeb');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+}
+
+function closeStaffModal() {
+  const modal = document.getElementById('modalStaffWeb');
+  if (modal) {
+    modal.classList.remove('flex');
+    modal.classList.add('hidden');
+  }
+}
+
+function onStaffGuruSelectChange() {
+  const sel = document.getElementById('staffSelectGuru');
+  if (!sel) return;
+  const val = sel.value;
+  if (!val) return;
+  const t = (appState.teachers || []).find(x => x.rowId == val);
+  if (t) {
+    document.getElementById('staffInputNama').value = t.namaGuru || '';
+    document.getElementById('staffInputNip').value = t.nip || '';
+    document.getElementById('staffInputJabatan').value = t.jabatan || 'Dewan Guru';
+    document.getElementById('staffInputFotoUrl').value = t.fotoUrl || '';
+    const preview = document.getElementById('staffFotoPreview');
+    if (preview) preview.src = t.fotoUrl || 'https://cdn-icons-png.flaticon.com/512/3135/3135768.png';
+  }
+}
+
+function previewStaffLocalPhoto(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const preview = document.getElementById('staffFotoPreview');
+      if (preview) preview.src = e.target.result;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+async function handleStaffFormSubmit(e) {
+  e.preventDefault();
+  const rowId = document.getElementById('staffRowId').value;
+  const file = document.getElementById('staffInputFotoFile')?.files[0];
+  let fotoBase64 = null;
+  if (file) {
+    fotoBase64 = await fileToBase64(file);
+  }
+
+  const payload = {
+    namaGuru: document.getElementById('staffInputNama').value.trim(),
+    nip: document.getElementById('staffInputNip').value.trim(),
+    jabatan: document.getElementById('staffInputJabatan').value.trim(),
+    fotoUrl: document.getElementById('staffInputFotoUrl').value.trim(),
+    fotoBase64: fotoBase64
+  };
+
+  const btn = document.getElementById('btnSaveStaff');
+  if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; btn.disabled = true; }
+
+  const res = await apiPost('web.saveStaff', payload, currentAdminToken, { rowId: rowId ? parseInt(rowId) : null });
+  if (btn) { btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan Profil Pendidik'; btn.disabled = false; }
+
+  alert(res.message);
+  if (res.success) {
+    closeStaffModal();
+    loadDataSWR(true);
+  }
+}
+
+async function deleteStaff(rowId) {
+  if (!confirm('Hapus guru ini dari daftar profil pendidik?')) return;
+  const res = await apiPost('web.deleteStaff', {}, currentAdminToken, { rowId: parseInt(rowId) });
+  alert(res.message);
+  if (res.success) {
+    loadDataSWR(true);
+  }
 }
 
 // Charts & Search
@@ -3904,17 +4270,8 @@ async function captureAndSaveRekamWajah() {
   ctx.drawImage(video, 0, 0, 400, 300);
   const base64Data = canvas.toDataURL('image/jpeg', 0.7);
 
-  // Generate visual descriptor vector
-  const imgData = ctx.getImageData(50, 50, 300, 200);
-  let descriptorArr = [];
-  for (let i = 0; i < 64; i++) {
-    let sum = 0;
-    const offset = Math.floor((imgData.data.length / 64) * i);
-    for (let j = 0; j < 30; j++) {
-      sum += imgData.data[offset + j * 4] || 0;
-    }
-    descriptorArr.push(Math.round(sum / 30));
-  }
+  // Generate visual descriptor vector yang kompatibel dengan scanner otomatis
+  const descriptorArr = extractFaceVector_(ctx, 400, 300);
   const descriptorStr = descriptorArr.join(',');
 
   const btn = document.getElementById('btnCaptureRekamWajah');
@@ -4583,36 +4940,46 @@ function renderUsersTable() {
   if (!tbody) return;
   tbody.innerHTML = '';
 
-  const filterRole = document.getElementById('filterUserRole')?.value || '';
-  const search = document.getElementById('searchUserKeyword')?.value.toLowerCase() || '';
+  const filterRole = (document.getElementById('filterUserRole')?.value || '').toLowerCase();
+  const search = (document.getElementById('searchUserInput')?.value || '').toLowerCase().trim();
 
   const list = (appState.users || []).filter(u => {
-    if (filterRole && u.role !== filterRole) return false;
-    if (search && !u.username.toLowerCase().includes(search) && !u.nama.toLowerCase().includes(search)) return false;
+    const uRole = (u.role || '').toLowerCase();
+    if (filterRole && uRole !== filterRole) return false;
+    const nama = (u.namaLengkap || u.nama || '').toLowerCase();
+    const username = (u.username || '').toLowerCase();
+    const identitas = (u.identitas || u.refId || '').toLowerCase();
+    if (search && !nama.includes(search) && !username.includes(search) && !identitas.includes(search)) return false;
     return true;
   });
 
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">Belum ada akun pengguna di sistem.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400">Belum ada akun pengguna di sistem.</td></tr>`;
     return;
   }
 
   list.forEach((u, idx) => {
     let roleBadge = "bg-indigo-100 text-indigo-800";
-    if (u.role === 'Guru') roleBadge = "bg-teal-100 text-teal-800";
-    else if (u.role === 'Siswa') roleBadge = "bg-purple-100 text-purple-800";
+    const rLower = (u.role || '').toLowerCase();
+    if (rLower === 'guru') roleBadge = "bg-teal-100 text-teal-800";
+    else if (rLower === 'siswa') roleBadge = "bg-purple-100 text-purple-800";
+
+    const lastLoginDisplay = (u.terakhirLogin && u.terakhirLogin !== '-') 
+      ? u.terakhirLogin.replace('T', ' ').substring(0, 16) 
+      : '-';
 
     tbody.innerHTML += `
-      <tr class="hover:bg-slate-50">
+      <tr class="hover:bg-slate-50 transition">
         <td class="p-3 text-slate-500 font-semibold">${idx + 1}</td>
-        <td class="p-3 font-bold text-slate-800">${u.nama}</td>
-        <td class="p-3 font-mono text-indigo-600 font-bold">${u.username}</td>
+        <td class="p-3 font-mono font-bold text-indigo-600">${u.username || '-'}</td>
+        <td class="p-3 font-bold text-slate-800">${u.namaLengkap || u.nama || '-'}</td>
         <td class="p-3"><span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${roleBadge}">${u.role}</span></td>
-        <td class="p-3 font-mono text-xs text-slate-600">${u.refId || '-'}</td>
-        <td class="p-3"><span class="px-2 py-0.5 rounded text-[11px] font-bold ${u.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">${u.status || 'Aktif'}</span></td>
+        <td class="p-3 font-mono text-xs text-slate-600">${u.identitas || u.refId || '-'}</td>
+        <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-bold ${u.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">${u.status || 'Aktif'}</span></td>
+        <td class="p-3 text-xs text-slate-600 font-mono">${lastLoginDisplay}</td>
         <td class="p-3 text-center">
           <div class="flex items-center justify-center gap-1.5">
-            <button onclick="openResetPasswordModal('${u.userId}')" class="p-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-xs" title="Reset Password"><i class="fa-solid fa-key"></i></button>
+            <button onclick="openResetPasswordModal('${u.userId}')" class="p-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-xs" title="Reset Password Pengguna"><i class="fa-solid fa-key"></i></button>
             <button onclick="openUserModal('${u.userId}')" class="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs" title="Edit Akun"><i class="fa-solid fa-pen-to-square"></i></button>
             <button onclick="handleDeleteUser('${u.userId}')" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs" title="Hapus Akun"><i class="fa-solid fa-trash"></i></button>
           </div>
@@ -4629,11 +4996,11 @@ function openUserModal(userId = null) {
     if (u) {
       document.getElementById('userModalTitle').innerText = 'Edit Akun Pengguna';
       document.getElementById('userFormRole').value = u.role;
-      document.getElementById('userFormNama').value = u.nama;
-      document.getElementById('userFormUsername').value = u.username;
+      document.getElementById('userFormNama').value = u.namaLengkap || u.nama || '';
+      document.getElementById('userFormUsername').value = u.username || '';
       document.getElementById('userFormPassword').value = '';
       document.getElementById('userPasswordHint').classList.remove('hidden');
-      document.getElementById('userFormRefId').value = u.refId || '';
+      document.getElementById('userFormRefId').value = u.identitas || u.refId || '';
       document.getElementById('userFormStatus').value = u.status || 'Aktif';
     }
   } else {
@@ -4689,7 +5056,7 @@ function openResetPasswordModal(userId) {
   const u = (appState.users || []).find(x => x.userId === userId);
   if (!u) return;
   document.getElementById('resetUserId').value = userId;
-  document.getElementById('resetUserNama').innerText = u.nama;
+  document.getElementById('resetUserNama').innerText = u.namaLengkap || u.nama || u.username;
   document.getElementById('resetUserRole').innerText = `Role: ${u.role} | Username: ${u.username}`;
   document.getElementById('resetNewPassword').value = '';
   document.getElementById('modalResetPasswordUser').classList.remove('hidden');
