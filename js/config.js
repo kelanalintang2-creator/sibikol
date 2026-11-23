@@ -9,7 +9,7 @@
 
 const CONFIG = {
   // Masukkan URL Deployment Google Apps Script Anda di sini:
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzIxfpES8E6EDYFIhPnHz4QaT2yCRxhgaTLjiIQFMCdH2PYQ82iBwa3ZqMzvcTXa4q3Ow/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwERhhukZKzNV66l8ON-hS7ktc_7MGxAa0s-YPkb6d9g92V5_Al0QUdoOyGvjiw9nm4/exec',
 
   // Nama & Metadata Aplikasi
   APP_NAME: 'SD NEGERI PILANGREJO 1',
