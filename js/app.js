@@ -255,6 +255,31 @@ function applyPayloadToState(data) {
   appState.users = data.users || appState.users;
 }
 
+/**
+ * Optimistic UI Delete Helper (gas-instant-ux):
+ * Menghapus data dari memori lokal dan me-render ulang DOM seketika (0 ms delay),
+ * kemudian mengirimkan request delete ke backend secara asinkron di latar belakang.
+ */
+function optimisticDeleteLocal_(stateKey, rowIdKey, rowIdVal, renderFn, apiAction, extraPayload = {}) {
+  const prevList = [...(appState[stateKey] || [])];
+  appState[stateKey] = appState[stateKey].filter(item => String(item[rowIdKey]) !== String(rowIdVal));
+  if (typeof renderFn === 'function') renderFn();
+
+  try {
+    const cached = JSON.parse(localStorage.getItem('spilsa_cached_boot') || '{}');
+    cached[stateKey] = appState[stateKey];
+    localStorage.setItem('spilsa_cached_boot', JSON.stringify(cached));
+  } catch(e){}
+
+  apiPost(apiAction, extraPayload, currentAdminToken, { rowId: rowIdVal }).then(res => {
+    if (!res || !res.success) {
+      alert('Gagal menghapus data di server: ' + (res?.message || 'Koneksi terputus'));
+      appState[stateKey] = prevList;
+      if (typeof renderFn === 'function') renderFn();
+    }
+  });
+}
+
 function showSyncIndicator(isLoading) {
   const dot = document.getElementById('syncIndicatorDot');
   if (dot) {
@@ -1529,11 +1554,8 @@ async function handleManualPresensiSiswaSubmit(e) {
 }
 
 async function deletePresensiSiswa(rowId) {
-  if (confirm('Hapus data presensi siswa ini?')) {
-    const res = await apiPost('presensi.deleteSiswa', { rowId: rowId });
-    alert(res.message);
-    if (res.success) loadDataSWR(true);
-  }
+  if (!confirm('Hapus data presensi siswa ini?')) return;
+  optimisticDeleteLocal_('presensiSiswa', 'rowId', rowId, renderPresensiSiswaTable, 'presensi.deleteSiswa');
 }
 
 function toggleSelectAllPresensiSiswa(master) {
@@ -1543,12 +1565,20 @@ function toggleSelectAllPresensiSiswa(master) {
 async function deleteSelectedPresensiSiswa() {
   const selected = document.querySelectorAll('.presensi-siswa-checkbox:checked');
   if (selected.length === 0) { alert('Pilih minimal satu data presensi siswa.'); return; }
-  if (confirm(`Hapus ${selected.length} data presensi siswa terpilih?`)) {
-    const rowIds = Array.from(selected).map(cb => parseInt(cb.value));
-    const res = await apiPost('presensi.deleteMultipleSiswa', { rowIds: rowIds });
-    alert(res.message);
-    if (res.success) loadDataSWR(true);
-  }
+  if (!confirm(`Hapus ${selected.length} data presensi siswa terpilih?`)) return;
+
+  const rowIds = Array.from(selected).map(cb => parseInt(cb.value));
+  const prevList = [...appState.presensiSiswa];
+  appState.presensiSiswa = appState.presensiSiswa.filter(p => !rowIds.includes(p.rowId));
+  renderPresensiSiswaTable();
+
+  apiPost('presensi.deleteMultipleSiswa', { rowIds: rowIds }, currentAdminToken).then(res => {
+    if (!res || !res.success) {
+      alert('Gagal menghapus di server: ' + (res?.message || 'Error'));
+      appState.presensiSiswa = prevList;
+      renderPresensiSiswaTable();
+    }
+  });
 }
 
 // Logika Presensi Guru
@@ -1778,11 +1808,8 @@ async function handleManualPresensiGuruSubmit(e) {
 }
 
 async function deletePresensiGuru(rowId) {
-  if (confirm('Hapus log presensi guru ini?')) {
-    const res = await apiPost('presensi.deleteGuru', { rowId: rowId });
-    alert(res.message);
-    if (res.success) loadDataSWR(true);
-  }
+  if (!confirm('Hapus log presensi guru ini?')) return;
+  optimisticDeleteLocal_('presensiGuru', 'rowId', rowId, renderPresensiGuruTable, 'presensi.deleteGuru');
 }
 
 function toggleSelectAllPresensiGuru(master) {
@@ -1792,12 +1819,20 @@ function toggleSelectAllPresensiGuru(master) {
 async function deleteSelectedPresensiGuru() {
   const selected = document.querySelectorAll('.presensi-guru-checkbox:checked');
   if (selected.length === 0) { alert('Pilih minimal satu data presensi guru.'); return; }
-  if (confirm(`Hapus ${selected.length} data presensi guru terpilih?`)) {
-    const rowIds = Array.from(selected).map(cb => parseInt(cb.value));
-    const res = await apiPost('presensi.deleteMultipleGuru', { rowIds: rowIds });
-    alert(res.message);
-    if (res.success) loadDataSWR(true);
-  }
+  if (!confirm(`Hapus ${selected.length} data presensi guru terpilih?`)) return;
+
+  const rowIds = Array.from(selected).map(cb => parseInt(cb.value));
+  const prevList = [...appState.presensiGuru];
+  appState.presensiGuru = appState.presensiGuru.filter(p => !rowIds.includes(p.rowId));
+  renderPresensiGuruTable();
+
+  apiPost('presensi.deleteMultipleGuru', { rowIds: rowIds }, currentAdminToken).then(res => {
+    if (!res || !res.success) {
+      alert('Gagal menghapus di server: ' + (res?.message || 'Error'));
+      appState.presensiGuru = prevList;
+      renderPresensiGuruTable();
+    }
+  });
 }
 
 // ============================================
@@ -2249,7 +2284,31 @@ function triggerBrowserDownloadFile_(blob, filename) {
   }, 1200);
 }
 
-function downloadExcelFileHelper(filename, sheetName, headers, sampleRow) {
+async function ensureSheetJSLoaded_() {
+  if (typeof XLSX !== 'undefined' && XLSX.utils && XLSX.read) return true;
+  const cdns = [
+    'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+    'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+  ];
+  for (const src of cdns) {
+    try {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = () => resolve();
+        s.onerror = () => reject();
+        document.head.appendChild(s);
+      });
+      if (typeof XLSX !== 'undefined' && XLSX.utils && XLSX.read) return true;
+    } catch (e) {}
+  }
+  return typeof XLSX !== 'undefined';
+}
+
+async function downloadExcelFileHelper(filename, sheetName, headers, sampleRow) {
+  await ensureSheetJSLoaded_();
   // Engine 1: Gunakan SheetJS jika terpasang & berfungsi
   if (typeof XLSX !== 'undefined' && XLSX.utils && XLSX.write) {
     try {
@@ -2339,11 +2398,13 @@ function showUploadBtn(type) {
   btn.classList.remove('hidden');
 }
 
-function parseExcelToRows_(file, expectedMinCols, targetCols) {
+async function parseExcelToRows_(file, expectedMinCols, targetCols) {
+  const ready = await ensureSheetJSLoaded_();
+  if (!ready || typeof XLSX === 'undefined') {
+    throw new Error('Pustaka SheetJS (XLSX) gagal dimuat dari server CDN. Silakan periksa koneksi internet Anda atau coba beberapa saat lagi.');
+  }
+
   return new Promise((resolve, reject) => {
-    if (typeof XLSX === 'undefined') {
-      return reject(new Error('Pustaka SheetJS (XLSX) tidak terdeteksi di browser.'));
-    }
     const reader = new FileReader();
     reader.onload = function(e) {
       try {
@@ -3066,12 +3127,20 @@ function toggleSelectAllStudents(master) {
 async function deleteSelectedStudents() {
   const selected = document.querySelectorAll('.student-checkbox:checked');
   if (selected.length === 0) { alert('Pilih minimal satu siswa.'); return; }
-  if (confirm(`Hapus ${selected.length} data siswa terpilih?`)) {
-    const rowIds = Array.from(selected).map(cb => parseInt(cb.value));
-    const res = await apiPost('siswa.deleteMultiple', { rowIds: rowIds });
-    alert(res.message);
-    if (res.success) loadDataSWR(true);
-  }
+  if (!confirm(`Hapus ${selected.length} data siswa terpilih?`)) return;
+
+  const rowIds = Array.from(selected).map(cb => parseInt(cb.value));
+  const prevList = [...appState.students];
+  appState.students = appState.students.filter(s => !rowIds.includes(s.rowId));
+  renderAdminTable();
+
+  apiPost('siswa.deleteMultiple', { rowIds: rowIds }, currentAdminToken).then(res => {
+    if (!res || !res.success) {
+      alert('Gagal menghapus di server: ' + (res?.message || 'Error'));
+      appState.students = prevList;
+      renderAdminTable();
+    }
+  });
 }
 
 function openStudentModal() {
@@ -3132,20 +3201,28 @@ async function handleStudentFormSubmit(e) {
     jmlSaudara: document.getElementById('jmlSaudara').value
   };
 
+  // Optimistic UI: langsung tampilkan seketika (0 ms)
+  closeStudentModal();
+  if (rowId) {
+    const idx = appState.students.findIndex(s => String(s.rowId) === String(rowId));
+    if (idx !== -1) appState.students[idx] = { ...appState.students[idx], ...data };
+  } else {
+    appState.students.unshift({ rowId: Date.now(), fotoUrl: '', ...data });
+  }
+  renderAdminTable();
+
   const res = await apiPost('siswa.save', data, currentAdminToken, { rowId: rowId ? parseInt(rowId) : null });
-  alert(res.message);
-  if (res.success) {
-    closeStudentModal();
+  if (res && res.success) {
+    loadDataSWR(true);
+  } else {
+    alert('Peringatan server: ' + (res?.message || 'Gagal menyimpan'));
     loadDataSWR(true);
   }
 }
 
 async function deleteStudent(rowId) {
-  if (confirm('Hapus siswa ini?')) {
-    const res = await apiPost('siswa.delete', {}, currentAdminToken, { rowId: rowId });
-    alert(res.message);
-    if (res.success) loadDataSWR(true);
-  }
+  if (!confirm('Hapus siswa ini?')) return;
+  optimisticDeleteLocal_('students', 'rowId', rowId, renderAdminTable, 'siswa.delete');
 }
 
 // Teacher Table Logic
@@ -3246,20 +3323,28 @@ async function handleTeacherFormSubmit(e) {
     pendidikanTerakhir: document.getElementById('teacherPendidikan').value
   };
 
+  // Optimistic UI: langsung tampilkan seketika (0 ms)
+  closeTeacherModal();
+  if (rowId) {
+    const idx = appState.teachers.findIndex(t => String(t.rowId) === String(rowId));
+    if (idx !== -1) appState.teachers[idx] = { ...appState.teachers[idx], ...data };
+  } else {
+    appState.teachers.unshift({ rowId: Date.now(), fotoUrl: '', ...data });
+  }
+  renderTeacherTable();
+
   const res = await apiPost('guru.save', data, currentAdminToken, { rowId: rowId ? parseInt(rowId) : null });
-  alert(res.message);
-  if (res.success) {
-    closeTeacherModal();
+  if (res && res.success) {
+    loadDataSWR(true);
+  } else {
+    alert('Peringatan server: ' + (res?.message || 'Gagal menyimpan'));
     loadDataSWR(true);
   }
 }
 
 async function deleteTeacher(rowId) {
-  if (confirm('Hapus guru ini?')) {
-    const res = await apiPost('guru.delete', {}, currentAdminToken, { rowId: rowId });
-    alert(res.message);
-    if (res.success) loadDataSWR(true);
-  }
+  if (!confirm('Hapus guru ini?')) return;
+  optimisticDeleteLocal_('teachers', 'rowId', rowId, renderTeacherTable, 'guru.delete');
 }
 
 // Class Table Logic
@@ -3340,18 +3425,11 @@ async function handleClassFormSubmit(e) {
 }
 
 async function deleteClass(rowId) {
-  if (confirm('Hapus kelas ini?')) {
-    const res = await apiPost('kelas.delete', {}, currentAdminToken, { rowId: rowId });
-    alert(res.message);
-    if (res.success) {
-      appState.classes = appState.classes.filter(c => c.rowId != rowId);
-      renderClassTable();
-      populateDropdowns();
-      await loadDataSWR(true);
-      renderClassTable();
-      populateDropdowns();
-    }
-  }
+  if (!confirm('Hapus kelas ini?')) return;
+  optimisticDeleteLocal_('classes', 'rowId', rowId, () => {
+    renderClassTable();
+    populateDropdowns();
+  }, 'kelas.delete');
 }
 
 // Prestasi Table Logic
@@ -3418,20 +3496,28 @@ async function handlePrestasiFormSubmit(e) {
     penyelenggara: document.getElementById('inputPrestasiPenyelenggara').value
   };
 
+  // Optimistic UI: tampilkan instan (0 ms)
+  closePrestasiModal();
+  if (rowId) {
+    const idx = appState.prestasi.findIndex(p => String(p.rowId) === String(rowId));
+    if (idx !== -1) appState.prestasi[idx] = { ...appState.prestasi[idx], ...data };
+  } else {
+    appState.prestasi.unshift({ rowId: Date.now(), ...data });
+  }
+  renderPrestasiTable();
+
   const res = await apiPost('prestasi.save', data, currentAdminToken, { rowId: rowId ? parseInt(rowId) : null });
-  alert(res.message);
-  if (res.success) {
-    closePrestasiModal();
+  if (res && res.success) {
+    loadDataSWR(true);
+  } else {
+    alert('Peringatan server: ' + (res?.message || 'Gagal menyimpan'));
     loadDataSWR(true);
   }
 }
 
 async function deletePrestasi(rowId) {
-  if (confirm('Hapus data prestasi ini?')) {
-    const res = await apiPost('prestasi.delete', {}, currentAdminToken, { rowId: rowId });
-    alert(res.message);
-    if (res.success) loadDataSWR(true);
-  }
+  if (!confirm('Hapus data prestasi ini?')) return;
+  optimisticDeleteLocal_('prestasi', 'rowId', rowId, renderPrestasiTable, 'prestasi.delete');
 }
 
 // Jenis & Catatan Pelanggaran
@@ -3469,24 +3555,41 @@ async function handleJenisFormSubmit(e) {
   e.preventDefault();
   const rowId = document.getElementById('jenisRowId').value;
   const data = {
-    jenisPelanggaran: document.getElementById('inputJenisNama').value,
+    jenisPelanggaran: document.getElementById('inputJenisNama').value.trim(),
     kategoriPelanggaran: document.getElementById('inputJenisKategori').value,
     pointPelanggaran: document.getElementById('inputJenisPoin').value
   };
+  if (!data.jenisPelanggaran) {
+    alert('Nama jenis pelanggaran tidak boleh kosong!');
+    return;
+  }
+
+  // Optimistic UI: tampilkan instan (0 ms)
+  closeJenisModal();
+  if (rowId) {
+    const idx = appState.jenisPelanggaran.findIndex(j => String(j.rowId) === String(rowId));
+    if (idx !== -1) appState.jenisPelanggaran[idx] = { ...appState.jenisPelanggaran[idx], ...data };
+  } else {
+    appState.jenisPelanggaran.push({ rowId: Date.now(), ...data });
+  }
+  renderJenisTable();
+  populateDropdowns();
+
   const res = await apiPost('pelanggaran.saveJenis', data, currentAdminToken, { rowId: rowId ? parseInt(rowId) : null });
-  alert(res.message);
-  if (res.success) {
-    closeJenisModal();
+  if (res && res.success) {
+    loadDataSWR(true);
+  } else {
+    alert('Peringatan server: ' + (res?.message || 'Gagal menyimpan'));
     loadDataSWR(true);
   }
 }
 
 async function deleteJenis(rowId) {
-  if (confirm('Hapus jenis pelanggaran ini?')) {
-    const res = await apiPost('pelanggaran.deleteJenis', {}, currentAdminToken, { rowId: rowId });
-    alert(res.message);
-    if (res.success) loadDataSWR(true);
-  }
+  if (!confirm('Hapus jenis pelanggaran ini?')) return;
+  optimisticDeleteLocal_('jenisPelanggaran', 'rowId', rowId, () => {
+    renderJenisTable();
+    populateDropdowns();
+  }, 'pelanggaran.deleteJenis');
 }
 
 function renderCatatanTable() {
@@ -3586,20 +3689,28 @@ async function handleCatatanFormSubmit(e) {
     keterangan: document.getElementById('catatanKeterangan').value
   };
 
+  // Optimistic UI: tampilkan instan (0 ms)
+  closeCatatanModal();
+  if (rowId) {
+    const idx = appState.catatanPelanggaran.findIndex(c => String(c.rowId) === String(rowId));
+    if (idx !== -1) appState.catatanPelanggaran[idx] = { ...appState.catatanPelanggaran[idx], ...data };
+  } else {
+    appState.catatanPelanggaran.unshift({ rowId: Date.now(), ...data });
+  }
+  renderCatatanTable();
+
   const res = await apiPost('pelanggaran.saveCatatan', data, currentAdminToken, { rowId: rowId ? parseInt(rowId) : null });
-  alert(res.message);
-  if (res.success) {
-    closeCatatanModal();
+  if (res && res.success) {
+    loadDataSWR(true);
+  } else {
+    alert('Peringatan server: ' + (res?.message || 'Gagal menyimpan'));
     loadDataSWR(true);
   }
 }
 
 async function deleteCatatanPelanggaran(rowId) {
-  if (confirm('Hapus catatan pelanggaran ini?')) {
-    const res = await apiPost('pelanggaran.deleteCatatan', {}, currentAdminToken, { rowId: rowId });
-    alert(res.message);
-    if (res.success) loadDataSWR(true);
-  }
+  if (!confirm('Hapus catatan pelanggaran ini?')) return;
+  optimisticDeleteLocal_('catatanPelanggaran', 'rowId', rowId, renderCatatanTable, 'pelanggaran.deleteCatatan');
 }
 
 // Konseling Table Logic
@@ -3685,20 +3796,28 @@ async function handleKonselingFormSubmit(e) {
     buktiBase64: buktiBase64
   };
 
+  // Optimistic UI: tampilkan instan (0 ms)
+  closeKonselingModal();
+  if (rowId) {
+    const idx = appState.konseling.findIndex(c => String(c.rowId) === String(rowId));
+    if (idx !== -1) appState.konseling[idx] = { ...appState.konseling[idx], ...data };
+  } else {
+    appState.konseling.unshift({ rowId: Date.now(), ...data });
+  }
+  renderKonselingTable();
+
   const res = await apiPost('konseling.save', data, currentAdminToken, { rowId: rowId ? parseInt(rowId) : null });
-  alert(res.message);
-  if (res.success) {
-    closeKonselingModal();
+  if (res && res.success) {
+    loadDataSWR(true);
+  } else {
+    alert('Peringatan server: ' + (res?.message || 'Gagal menyimpan'));
     loadDataSWR(true);
   }
 }
 
 async function deleteKonseling(rowId) {
-  if (confirm('Hapus riwayat konseling ini?')) {
-    const res = await apiPost('konseling.delete', {}, currentAdminToken, { rowId: rowId });
-    alert(res.message);
-    if (res.success) loadDataSWR(true);
-  }
+  if (!confirm('Hapus riwayat konseling ini?')) return;
+  optimisticDeleteLocal_('konseling', 'rowId', rowId, renderKonselingTable, 'konseling.delete');
 }
 
 // Web CMS & Galeri
@@ -3760,11 +3879,8 @@ async function handleWebCMSFormSubmit(e) {
 }
 
 async function deleteCMS(rowId) {
-  if (confirm('Hapus konten ini?')) {
-    const res = await apiPost('web.deleteCMS', {}, currentAdminToken, { rowId: rowId });
-    alert(res.message);
-    if (res.success) loadDataSWR(true);
-  }
+  if (!confirm('Hapus konten ini?')) return;
+  optimisticDeleteLocal_('webCMS', 'rowId', rowId, renderWebCMSTable, 'web.deleteCMS');
 }
 
 function renderGaleriTable() {
@@ -3819,11 +3935,8 @@ async function handleGaleriFormSubmit(e) {
 }
 
 async function deleteGaleri(rowId) {
-  if (confirm('Hapus foto dari galeri?')) {
-    const res = await apiPost('web.deleteGaleri', {}, currentAdminToken, { rowId: rowId });
-    alert(res.message);
-    if (res.success) loadDataSWR(true);
-  }
+  if (!confirm('Hapus foto dari galeri?')) return;
+  optimisticDeleteLocal_('galeri', 'rowId', rowId, renderGaleriTable, 'web.deleteGaleri');
 }
 
 function renderStaffTable() {
@@ -3962,11 +4075,8 @@ async function handleStaffFormSubmit(e) {
 
 async function deleteStaff(rowId) {
   if (!confirm('Hapus guru ini dari daftar profil pendidik?')) return;
-  const res = await apiPost('web.deleteStaff', {}, currentAdminToken, { rowId: parseInt(rowId) });
-  alert(res.message);
-  if (res.success) {
-    loadDataSWR(true);
-  }
+  optimisticDeleteLocal_('teachers', 'rowId', rowId, renderStaffTable, 'web.deleteStaff');
+}
 }
 
 // Charts & Search
@@ -5275,10 +5385,6 @@ async function handleResetPasswordSubmit(e) {
 
 async function handleDeleteUser(userId) {
   if (!confirm('Hapus akun pengguna ini? Pengguna tidak akan dapat login lagi.')) return;
-  const res = await apiPost('user.delete', {}, currentAdminToken, { userId });
-  alert(res.message);
-  if (res.success) {
-    loadDataSWR(true);
-  }
+  optimisticDeleteLocal_('users', 'userId', userId, renderUsersTable, 'user.delete');
 }
 
