@@ -149,12 +149,21 @@ async function apiGet(action, params = {}) {
     const url = new URL(CONFIG.GAS_URL);
     url.searchParams.append('action', action);
     Object.keys(params).forEach(k => url.searchParams.append(k, params[k]));
-    const res = await fetch(url.toString());
-    const json = await res.json();
-    return json;
+    const res = await fetch(url.toString(), {
+      method: 'GET',
+      mode: 'cors',
+      redirect: 'follow'
+    });
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch(pe) {
+      console.warn('API GET non-JSON:', text);
+      return { success: false, message: 'Respons backend tidak valid: ' + text.substring(0, 100) };
+    }
   } catch (err) {
     console.warn('API GET Error:', err);
-    return { success: false, message: err.message };
+    return { success: false, message: 'Gagal terhubung ke backend (GET): ' + err.message };
   }
 }
 
@@ -167,17 +176,32 @@ async function apiPost(action, data = {}, token = null, extra = {}) {
       ...extra
     };
 
-    // ATURAN KRUSIAL ANTI-CORS: Gunakan text/plain
+    // ATURAN KRUSIAL ANTI-CORS: Gunakan text/plain tanpa preflight
     const res = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      mode: 'cors',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload)
     });
-    const json = await res.json();
+    const text = await res.text();
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch(parseErr) {
+      console.error('API POST non-JSON response:', text);
+      return { 
+        success: false, 
+        message: 'Server mengembalikan respons non-JSON. Pastikan Web App GAS dideploy dengan akses "Anyone" (Siapa saja).' 
+      };
+    }
     return json;
   } catch (err) {
     console.error('API POST Error:', err);
-    return { success: false, message: err.message };
+    return { 
+      success: false, 
+      message: 'Koneksi ke backend gagal (Failed to fetch). Pastikan koneksi internet aktif dan Deployment Web App Google Apps Script telah disetel ke "Who has access: Anyone" (Siapa saja).' 
+    };
   }
 }
 
@@ -742,6 +766,7 @@ function initScrollAnimations() {
     animatedElements.forEach(el => el.classList.add('is-revealed'));
     return;
   }
+
   const observer = new IntersectionObserver((entries, obs) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -750,17 +775,13 @@ function initScrollAnimations() {
       }
     });
   }, {
-    threshold: 0.05,
-    rootMargin: '0px 0px 100px 0px'
+    threshold: 0.1,
+    rootMargin: '0px 0px -40px 0px'
   });
 
   animatedElements.forEach(el => {
-    const rect = el.getBoundingClientRect();
-    if (rect.top < window.innerHeight + 100) {
-      el.classList.add('is-revealed');
-    } else {
-      observer.observe(el);
-    }
+    el.classList.remove('is-revealed');
+    observer.observe(el);
   });
 }
 
@@ -4573,14 +4594,14 @@ async function captureAndSaveRekamWajah() {
 
   const video = document.getElementById('rekamWajahVideo');
   const canvas = document.getElementById('rekamWajahCanvas');
-  canvas.width = 400;
-  canvas.height = 300;
+  canvas.width = 320;
+  canvas.height = 240;
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, 400, 300);
-  const base64Data = canvas.toDataURL('image/jpeg', 0.7);
+  ctx.drawImage(video, 0, 0, 320, 240);
+  const base64Data = canvas.toDataURL('image/jpeg', 0.5);
 
   // Generate visual descriptor vector yang kompatibel dengan scanner otomatis
-  const descriptorArr = extractFaceVector_(ctx, 400, 300);
+  const descriptorArr = extractFaceVector_(ctx, 320, 240);
   const descriptorStr = descriptorArr.join(',');
 
   const btn = document.getElementById('btnCaptureRekamWajah');
@@ -4590,9 +4611,13 @@ async function captureAndSaveRekamWajah() {
   const res = await apiPost('face.register', {
     role,
     targetId,
+    identitas: targetId,
     targetName,
+    nama: targetName,
     fotoWajah: base64Data,
-    descriptor: descriptorStr
+    fotoBase64: base64Data,
+    descriptor: descriptorStr,
+    descriptorJSON: descriptorStr
   });
 
   btn.innerHTML = '<i class="fa-solid fa-camera"></i> Ambil & Simpan Rekaman Wajah';
