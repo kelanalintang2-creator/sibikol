@@ -750,10 +750,18 @@ function initScrollAnimations() {
       }
     });
   }, {
-    threshold: 0.15,
-    rootMargin: '0px 0px -40px 0px'
+    threshold: 0.05,
+    rootMargin: '0px 0px 100px 0px'
   });
-  animatedElements.forEach(el => observer.observe(el));
+
+  animatedElements.forEach(el => {
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight + 100) {
+      el.classList.add('is-revealed');
+    } else {
+      observer.observe(el);
+    }
+  });
 }
 
 // ============================================
@@ -4076,7 +4084,6 @@ async function handleStaffFormSubmit(e) {
 async function deleteStaff(rowId) {
   if (!confirm('Hapus guru ini dari daftar profil pendidik?')) return;
   optimisticDeleteLocal_('teachers', 'rowId', rowId, renderStaffTable, 'web.deleteStaff');
-}
 }
 
 // Charts & Search
